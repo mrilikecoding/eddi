@@ -1,0 +1,4 @@
+{
+    "jupyter.jupyterServerType": "local",
+    "cmake.sourceDirectory": "${workspaceFolder}/libfreenect"
+}
