@@ -2,7 +2,7 @@
 import time
 
 from src.lumi import Lumi
-from src.dimmer import DimmerInterface
+from src.dimmer_interface import DimmerInterface
 from src.kinect_interface import KinectInterface
 
 if __name__ == "__main__":
@@ -37,13 +37,13 @@ if __name__ == "__main__":
         d = DimmerInterface(dimmer["name"])
         [d.add_channel(c, 0) for c in dimmer["channels"]]
         lumi.register_output_device(d)
-
     kinect = KinectInterface()
-    lumi.register_input_device(kinect, kinect.update_people_data)
-    lumi.listen()
+    lumi.register_input_device(kinect)
 
-    # test send
-    for d in dimmers:
-        lumi.send_message(d["name"], 0.2)
-    time.sleep(2)
-    lumi.blackout()
+    lumi.start()
+
+    # # test send
+    # for d in dimmers:
+    #     lumi.send_message(d["name"], 0.2)
+    # time.sleep(2)
+    # lumi.blackout()

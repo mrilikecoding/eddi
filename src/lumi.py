@@ -1,6 +1,7 @@
 from pythonosc import udp_client
 from pythonosc import dispatcher
 from pythonosc import osc_server
+from src.spatial_light_controller import SpatialLightController
 
 # Set up a mapping of OSC addresses to QLC+ virtual console sliders which are themselves mapped to functions controlling dmx channels
 class Lumi:
@@ -12,6 +13,7 @@ class Lumi:
         self.output_registry = {}
         self.input_registry = {}
         self.input_dispatcher = dispatcher.Dispatcher()
+        self.light_controller = SpatialLightController()
 
     def register_output_device(self, device):
         self.output_registry[device.name] = device
@@ -19,10 +21,15 @@ class Lumi:
     def generic_handler(self, unused_addr, *args):
         print(unused_addr, args)
 
-    def register_input_device(self, device, handler=None):
-        handler = self.generic_handler if handler == None else handler
-        self.input_registry[device.name] = device
-        self.input_dispatcher.map(device.osc_addr_prefix, handler)
+    def input_update_handler(self, device_instance):
+        self.light_controller.light_coordinates(device_instance)
+
+    def register_input_device(self, device_instance):
+        self.input_registry[device_instance.name] = device_instance
+        self.input_dispatcher.map(
+            device_instance.osc_addr_prefix, device_instance.osc_update
+        )
+        device_instance.set_update_callback(self.input_update_handler)
 
     def blackout(self):
         for device_name in self.output_registry.keys():
@@ -57,7 +64,7 @@ class Lumi:
             print(f"Couldn't send message to {device.name}...")
             print(e)
 
-    def listen(self, listener_port=12000, listener_server="127.0.0.1"):
+    def start(self, listener_port=12000, listener_server="127.0.0.1"):
         dispatcher = self.input_dispatcher
         server = osc_server.ThreadingOSCUDPServer(
             (listener_server, listener_port), dispatcher
