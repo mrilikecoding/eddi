@@ -1,2 +1,0 @@
-/Users/katevangeloff/Development/lumi/build/CMakeFiles/edit_cache.dir
-/Users/katevangeloff/Development/lumi/build/CMakeFiles/rebuild_cache.dir
