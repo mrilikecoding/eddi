@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 import time
 
-import src.lumi as Lumi
-import src.dimmer as Dimmer
+from src.lumi import Lumi
+from src.dimmer import DimmerInterface
+from src.kinect_interface import KinectInterface
 
 if __name__ == "__main__":
 
@@ -33,30 +34,16 @@ if __name__ == "__main__":
 
     lumi = Lumi()
     for dimmer in dimmers:
-        d = Dimmer(dimmer["name"])
+        d = DimmerInterface(dimmer["name"])
         [d.add_channel(c, 0) for c in dimmer["channels"]]
-        lumi.register_device(d)
+        lumi.register_output_device(d)
 
+    kinect = KinectInterface()
+    lumi.register_input_device(kinect, kinect.update_people_data)
+    lumi.listen()
+
+    # test send
     for d in dimmers:
         lumi.send_message(d["name"], 0.2)
     time.sleep(2)
     lumi.blackout()
-
-    # bundle = osc_bundle_builder.OscBundleBuilder(
-    #   osc_bundle_builder.IMMEDIATELY)
-    # msg = osc_message_builder.OscMessageBuilder(address="/SYNC")
-    # msg.add_arg(4.0)
-    # # Add 4 messages in the bundle, each with more arguments.
-    # bundle.add_content(msg.build())
-    # msg.add_arg(2)
-    # bundle.add_content(msg.build())
-    # msg.add_arg("value")
-    # bundle.add_content(msg.build())
-    # msg.add_arg(b"\x01\x02\x03")
-    # bundle.add_content(msg.build())
-
-    # sub_bundle = bundle.build()
-    # # Now add the same bundle inside itself.
-    # bundle.add_content(sub_bundle)
-    # # The bundle has 5 elements in total now.
-    # bundle = bundle.build()

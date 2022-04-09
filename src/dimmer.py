@@ -1,8 +1,9 @@
-class Dimmer:
+class DimmerInterface:
     def __init__(self, name=None):
         self.name = name
         self.channels = {}
         self.value = 0
+        self.osc_addr_prefix = "/dmxout"
 
     def add_channel(self, name, value):
         self.channels[name] = value
