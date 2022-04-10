@@ -21,8 +21,8 @@ class Lumi:
     def generic_handler(self, unused_addr, *args):
         print(unused_addr, args)
 
-    def input_update_handler(self, device_instance):
-        self.light_controller.light_coordinates(device_instance)
+    def input_update_handler(self, input_device_instance):
+        self.light_controller.light_coordinates(input_device_instance)
 
     def register_input_device(self, device_instance):
         self.input_registry[device_instance.name] = device_instance
@@ -65,6 +65,7 @@ class Lumi:
             print(e)
 
     def start(self, listener_port=12000, listener_server="127.0.0.1"):
+        self.light_controller.set_output_devices(self.output_registry)
         dispatcher = self.input_dispatcher
         server = osc_server.ThreadingOSCUDPServer(
             (listener_server, listener_port), dispatcher
