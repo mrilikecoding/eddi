@@ -1,0 +1,200 @@
+{
+    "d01": {
+        "right": false,
+        "left": true,
+        "back": false,
+        "front": false,
+        "top": true,
+        "middle": false,
+        "bottom": false
+    },
+    "d02": {
+        "right": false,
+        "left": true,
+        "back": false,
+        "front": false,
+        "top": true,
+        "middle": false,
+        "bottom": false
+    },
+    "d03": {
+        "right": false,
+        "left": true,
+        "back": false,
+        "front": false,
+        "top": true,
+        "middle": false,
+        "bottom": false
+    },
+    "d04": {
+        "right": false,
+        "left": true,
+        "back": false,
+        "front": false,
+        "top": true,
+        "middle": false,
+        "bottom": false
+    },
+    "d05": {
+        "right": false,
+        "left": true,
+        "back": false,
+        "front": false,
+        "top": true,
+        "middle": false,
+        "bottom": false
+    },
+    "d06": {
+        "right": false,
+        "left": true,
+        "back": false,
+        "front": false,
+        "top": true,
+        "middle": false,
+        "bottom": false
+    },
+    "d07": {
+        "right": false,
+        "left": true,
+        "back": false,
+        "front": false,
+        "top": true,
+        "middle": false,
+        "bottom": false
+    },
+    "d08": {
+        "right": false,
+        "left": true,
+        "back": false,
+        "front": false,
+        "top": true,
+        "middle": false,
+        "bottom": false
+    },
+    "d09": {
+        "right": true,
+        "left": false,
+        "back": false,
+        "front": false,
+        "top": true,
+        "middle": false,
+        "bottom": false
+    },
+    "d10": {
+        "right": true,
+        "left": false,
+        "back": false,
+        "front": false,
+        "top": true,
+        "middle": false,
+        "bottom": false
+    },
+    "d11": {
+        "right": true,
+        "left": false,
+        "back": false,
+        "front": false,
+        "top": true,
+        "middle": false,
+        "bottom": false
+    },
+    "d12": {
+        "right": true,
+        "left": false,
+        "back": false,
+        "front": false,
+        "top": true,
+        "middle": false,
+        "bottom": false
+    },
+    "d13": {
+        "right": true,
+        "left": false,
+        "back": false,
+        "front": false,
+        "top": true,
+        "middle": false,
+        "bottom": false
+    },
+    "d14": {
+        "right": true,
+        "left": false,
+        "back": false,
+        "front": false,
+        "top": true,
+        "middle": false,
+        "bottom": false
+    },
+    "d15": {
+        "right": true,
+        "left": false,
+        "back": false,
+        "front": false,
+        "top": true,
+        "middle": false,
+        "bottom": false
+    },
+    "d16": {
+        "right": true,
+        "left": false,
+        "back": false,
+        "front": false,
+        "top": true,
+        "middle": false,
+        "bottom": false
+    },
+    "s1": {
+        "right": true,
+        "left": false,
+        "back": false,
+        "front": false,
+        "top": false,
+        "middle": true,
+        "bottom": false
+    },
+    "s2": {
+        "right": false,
+        "left": true,
+        "back": false,
+        "front": false,
+        "top": false,
+        "middle": true,
+        "bottom": false
+    },
+    "f1": {
+        "right": true,
+        "left": false,
+        "back": false,
+        "front": true,
+        "top": false,
+        "middle": false,
+        "bottom": true
+    },
+    "f2": {
+        "right": true,
+        "left": false,
+        "back": true,
+        "front": false,
+        "top": false,
+        "middle": false,
+        "bottom": true
+    },
+    "f3": {
+        "right": false,
+        "left": true,
+        "back": true,
+        "front": false,
+        "top": false,
+        "middle": false,
+        "bottom": true
+    },
+    "f4": {
+        "right": false,
+        "left": true,
+        "back": false,
+        "front": true,
+        "top": false,
+        "middle": false,
+        "bottom": true
+    }
+}
