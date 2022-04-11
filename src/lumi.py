@@ -1,6 +1,9 @@
+import asyncio
 from pythonosc import udp_client
 from pythonosc import dispatcher
 from pythonosc import osc_server
+from pythonosc.osc_server import AsyncIOOSCUDPServer
+
 from src.spatial_light_controller import SpatialLightController
 
 # Set up a mapping of OSC addresses to QLC+ virtual console sliders which are themselves mapped to functions controlling dmx channels
@@ -66,9 +69,22 @@ class Lumi:
 
     def start(self, listener_port=12000, listener_server="127.0.0.1"):
         self.light_controller.set_output_devices(self.output_registry)
+        asyncio.run(self.init_main(listener_port, listener_server))
+
+    async def loop(self):
+        while True:
+            # TODO find something useful put here, like keys for quitting
+            print("test")
+
+    async def init_main(self, port, ip):
         dispatcher = self.input_dispatcher
-        server = osc_server.ThreadingOSCUDPServer(
-            (listener_server, listener_port), dispatcher
-        )
-        print(f"Lumi is listening on {server.server_address}")
-        server.serve_forever()
+        server = AsyncIOOSCUDPServer((ip, port), dispatcher, asyncio.get_event_loop())
+        (
+            transport,
+            protocol,
+        ) = await server.create_serve_endpoint()
+
+        print(f"Lumi is listening on {ip}:{port}")
+        await self.loop()  # Enter main loop of program
+
+        transport.close()  # Clean up serve endpoint
