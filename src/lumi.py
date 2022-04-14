@@ -16,7 +16,10 @@ class Lumi:
         self.output_registry = {}
         self.input_registry = {}
         self.input_dispatcher = dispatcher.Dispatcher()
-        self.light_controller = SpatialLightController()
+        self.light_controller = SpatialLightController(
+            send_channel_message=self.send_channel_message,
+            send_message=self.send_message,
+        )
 
     def register_output_device(self, device):
         self.output_registry[device.name] = device
@@ -25,7 +28,7 @@ class Lumi:
         print(unused_addr, args)
 
     def input_update_handler(self, input_device_instance):
-        self.light_controller.light_coordinates(input_device_instance)
+        self.light_controller.update_input(input_device_instance)
 
     def register_input_device(self, device_instance):
         self.input_registry[device_instance.name] = device_instance
@@ -38,31 +41,33 @@ class Lumi:
         for device_name in self.output_registry.keys():
             self.send_message(device_name, 0)
 
-    def send_message(self, device, value):
+    def send_message(self, device_name, value):
         """
         send the same value to every channel on a device
         """
+        device = self.output_registry[device_name]
         try:
             for channel_name in self.output_registry[device.name].channels.keys():
                 self.client.send_message(
                     device.osc_addr_prefix + "/" + device.name + channel_name, value
                 )
-                self.registry[device.name].set_value(channel_name, value)
-                print(f"Sent {device.name + channel_name} val {value}.")
+                self.output_registry[device.name].set_value(channel_name, value)
+                # print(f"Sent {device.name + channel_name} val {value}.")
         except Exception as e:
             print(f"Couldn't send message to {device.name}...")
             print(e)
 
-    def send_channel_message(self, device, channel_name, value):
+    def send_channel_message(self, device_name, channel_name, value):
         """
         send value to channel on a device
         """
+        device = self.output_registry[device_name]
         try:
             self.client.send_message(
                 device.osc_addr_prefix + "/" + device.name + channel_name, value
             )
-            self.output_registry[device.name][channel_name] = value
-            print(f"Sent {device.name + channel_name} val {value}.")
+            self.output_registry[device.name].set_value(channel_name, value)
+            # print(f"Sent {device.name + channel_name} val {value}.")
         except Exception as e:
             print(f"Couldn't send message to {device.name}...")
             print(e)
@@ -74,7 +79,8 @@ class Lumi:
     async def loop(self):
         while True:
             # TODO find something useful put here, like keys for quitting
-            print("test")
+            self.update()  # if we want to do other stuff...
+            await asyncio.sleep(1 / 150)  # FPS
 
     async def init_main(self, port, ip):
         dispatcher = self.input_dispatcher
@@ -87,4 +93,8 @@ class Lumi:
         print(f"Lumi is listening on {ip}:{port}")
         await self.loop()  # Enter main loop of program
 
+        self.blackout()  # let's turn off the lights on the way out
         transport.close()  # Clean up serve endpoint
+
+    def update(self):
+        pass
