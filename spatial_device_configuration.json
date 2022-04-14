@@ -6,7 +6,12 @@
         "front": false,
         "top": true,
         "middle": false,
-        "bottom": false
+        "bottom": false,
+        "channels": [
+            "r",
+            "g",
+            "b"
+        ]
     },
     "d02": {
         "right": false,
@@ -15,7 +20,12 @@
         "front": false,
         "top": true,
         "middle": false,
-        "bottom": false
+        "bottom": false,
+        "channels": [
+            "r",
+            "g",
+            "b"
+        ]
     },
     "d03": {
         "right": false,
@@ -24,7 +34,12 @@
         "front": false,
         "top": true,
         "middle": false,
-        "bottom": false
+        "bottom": false,
+        "channels": [
+            "r",
+            "g",
+            "b"
+        ]
     },
     "d04": {
         "right": false,
@@ -42,7 +57,12 @@
         "front": false,
         "top": true,
         "middle": false,
-        "bottom": false
+        "bottom": false,
+        "channels": [
+            "r",
+            "g",
+            "b"
+        ]
     },
     "d06": {
         "right": false,
@@ -51,7 +71,12 @@
         "front": false,
         "top": true,
         "middle": false,
-        "bottom": false
+        "bottom": false,
+        "channels": [
+            "r",
+            "g",
+            "b"
+        ]
     },
     "d07": {
         "right": false,
@@ -60,7 +85,12 @@
         "front": false,
         "top": true,
         "middle": false,
-        "bottom": false
+        "bottom": false,
+        "channels": [
+            "r",
+            "g",
+            "b"
+        ]
     },
     "d08": {
         "right": false,
@@ -69,7 +99,12 @@
         "front": false,
         "top": true,
         "middle": false,
-        "bottom": false
+        "bottom": false,
+        "channels": [
+            "r",
+            "g",
+            "b"
+        ]
     },
     "d09": {
         "right": true,
@@ -78,7 +113,12 @@
         "front": false,
         "top": true,
         "middle": false,
-        "bottom": false
+        "bottom": false,
+        "channels": [
+            "r",
+            "g",
+            "b"
+        ]
     },
     "d10": {
         "right": true,
@@ -87,7 +127,12 @@
         "front": false,
         "top": true,
         "middle": false,
-        "bottom": false
+        "bottom": false,
+        "channels": [
+            "r",
+            "g",
+            "b"
+        ]
     },
     "d11": {
         "right": true,
@@ -96,7 +141,12 @@
         "front": false,
         "top": true,
         "middle": false,
-        "bottom": false
+        "bottom": false,
+        "channels": [
+            "r",
+            "g",
+            "b"
+        ]
     },
     "d12": {
         "right": true,
@@ -105,7 +155,12 @@
         "front": false,
         "top": true,
         "middle": false,
-        "bottom": false
+        "bottom": false,
+        "channels": [
+            "r",
+            "g",
+            "b"
+        ]
     },
     "d13": {
         "right": true,
@@ -114,7 +169,12 @@
         "front": false,
         "top": true,
         "middle": false,
-        "bottom": false
+        "bottom": false,
+        "channels": [
+            "r",
+            "g",
+            "b"
+        ]
     },
     "d14": {
         "right": true,
@@ -123,7 +183,12 @@
         "front": false,
         "top": true,
         "middle": false,
-        "bottom": false
+        "bottom": false,
+        "channels": [
+            "r",
+            "g",
+            "b"
+        ]
     },
     "d15": {
         "right": true,
@@ -132,7 +197,12 @@
         "front": false,
         "top": true,
         "middle": false,
-        "bottom": false
+        "bottom": false,
+        "channels": [
+            "r",
+            "g",
+            "b"
+        ]
     },
     "d16": {
         "right": true,
@@ -141,7 +211,12 @@
         "front": false,
         "top": true,
         "middle": false,
-        "bottom": false
+        "bottom": false,
+        "channels": [
+            "r",
+            "g",
+            "b"
+        ]
     },
     "s1": {
         "right": true,
@@ -150,7 +225,13 @@
         "front": false,
         "top": false,
         "middle": true,
-        "bottom": false
+        "bottom": false,
+        "channels": [
+            "r",
+            "g",
+            "b",
+            "a"
+        ]
     },
     "s2": {
         "right": false,
@@ -159,7 +240,13 @@
         "front": false,
         "top": false,
         "middle": true,
-        "bottom": false
+        "bottom": false,
+        "channels": [
+            "r",
+            "g",
+            "b",
+            "a"
+        ]
     },
     "f1": {
         "right": true,
@@ -168,7 +255,13 @@
         "front": true,
         "top": false,
         "middle": false,
-        "bottom": true
+        "bottom": true,
+        "channels": [
+            "r",
+            "g",
+            "b",
+            "u"
+        ]
     },
     "f2": {
         "right": true,
@@ -177,7 +270,13 @@
         "front": false,
         "top": false,
         "middle": false,
-        "bottom": true
+        "bottom": true,
+        "channels": [
+            "r",
+            "g",
+            "b",
+            "u"
+        ]
     },
     "f3": {
         "right": false,
@@ -186,7 +285,13 @@
         "front": false,
         "top": false,
         "middle": false,
-        "bottom": true
+        "bottom": true,
+        "channels": [
+            "r",
+            "g",
+            "b",
+            "u"
+        ]
     },
     "f4": {
         "right": false,
@@ -195,6 +300,12 @@
         "front": true,
         "top": false,
         "middle": false,
-        "bottom": true
+        "bottom": true,
+        "channels": [
+            "r",
+            "g",
+            "b",
+            "u"
+        ]
     }
 }
