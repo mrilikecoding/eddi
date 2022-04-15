@@ -14,5 +14,5 @@ class DimmerInterface:
     def set_value(self, channel_name, value):
         self.channels[channel_name] = value
 
-    def get_value(self):
-        return self.value
+    def get_value(self, channel_name):
+        return self.channels[channel_name]

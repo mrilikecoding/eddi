@@ -1,8 +1,9 @@
 import json
-import numpy as np
+import simpful as sf
+from src.controller import Controller
 
 
-class SpatialLightController:
+class SpatialLightController(Controller):
     def __init__(self, output_devices={}, send_channel_message=None, send_message=None):
         # define the default min/max x,y,z input values
         # these will be used to determine degree of membership
@@ -15,7 +16,6 @@ class SpatialLightController:
         self.space_min_z = 0.0
         self.self_calibrate = True  # set the max bounds based on incoming data
 
-        # output devices are set from config file
         self.output_devices = output_devices
 
         # by default these will be handlers pass from lumi
@@ -27,6 +27,7 @@ class SpatialLightController:
         # from config file, map generic spatial assignments for each instrument
         # to a dictionary keyed off attribute
         self.attr_indexed_output_devices = {}
+        # TODO can probably abstract this from config file
         self.spatial_categories = [
             "left",
             "right",
@@ -43,6 +44,58 @@ class SpatialLightController:
             self.device_config = device_config
         except Exception as e:
             print("No device config file found", e)
+
+        # set up Fuzzy logic
+        self.FS = sf.FuzzySystem()
+        TLV = sf.AutoTriangle(
+            3, terms=["low", "mid", "high"], universe_of_discourse=[0, 1]
+        )
+        # Sigmoid
+        # S_1 = sf.InvSigmoidFuzzySet(c=0.5, a=0.2, term="low")
+        # S_2 = sf.SigmoidFuzzySet(c=0.5, a=0.2, term="high")
+        # sf.LinguisticVariable([S_1, S_2], universe_of_discourse=[0, 1])
+
+        # TODO need to do multiple people additively - normalize?
+        # inputs for x, y, z head position
+        self.FS.add_linguistic_variable("x", TLV)
+        self.FS.add_linguistic_variable("y", TLV)
+        self.FS.add_linguistic_variable("z", TLV)
+        # self.FS.add_linguistic_variable("x", S_1)
+        # self.FS.add_linguistic_variable("x", S_2)
+        # self.FS.add_linguistic_variable("y", S_1)
+        # self.FS.add_linguistic_variable("y", S_2)
+        # self.FS.add_linguistic_variable("z", S_1)
+        # self.FS.add_linguistic_variable("z", S_2)
+
+        # relative distance
+        self.FS.set_crisp_output_value("low", 0.0)
+        self.FS.set_crisp_output_value("mid", 0.5)
+        self.FS.set_crisp_output_value("high", 1.0)
+
+        self.FS.add_rules(
+            [
+                "IF (x IS low) THEN (left IS high)",
+                "IF (x IS mid) THEN (left IS mid)",
+                "IF (x IS high) THEN (left IS low)",
+                "IF (x IS low) THEN (right IS low)",
+                "IF (x IS mid) THEN (right IS mid)",
+                "IF (x IS high) THEN (right IS high)",
+                "IF (y IS low) THEN (bottom IS high)",
+                "IF (y IS low) THEN (middle IS mid)",
+                "IF (y IS mid) THEN (bottom IS mid)",
+                "IF (y IS high) THEN (bottom IS low)",
+                "IF (y IS mid) THEN (middle IS high)",
+                "IF (y IS mid) THEN (top IS mid)",
+                "IF (y IS low) THEN (top IS low)",
+                "IF (y IS high) THEN (top IS high)",
+                "IF (z IS low) THEN (front IS high)",
+                "IF (z IS mid) THEN (front IS mid)",
+                "IF (z IS high) THEN (front IS low)",
+                "IF (z IS low) THEN (back IS low)",
+                "IF (z IS mid) THEN (back IS mid)",
+                "IF (z IS high) THEN (back IS high)",
+            ]
+        )
 
     def set_output_devices(self, output_devices):
         self.output_devices = output_devices
@@ -93,10 +146,38 @@ class SpatialLightController:
                 if self.self_calibrate:
                     self.calibrate_min_max(x, y, z)
 
-                print("Non-normalized", person, x, y, z)
                 x, y, z = self.normalize_3d_point(x, y, z)
-                for device_name in self.output_devices.keys():
-                    self.send_channel_message(device_name, "r", x)
-                    self.send_channel_message(device_name, "g", y)
-                    self.send_channel_message(device_name, "b", z)
-                print("Normalized", person, x, y, z)
+                fuzzy_spatial_map = self.get_fuzzy_output(person_id, x, y, z)
+                self.set_spatial_map_values(fuzzy_spatial_map)
+        self.send_update()
+
+    def get_fuzzy_output(self, uid, x, y, z):
+        self.FS.set_variable("x", x)
+        self.FS.set_variable("y", y)
+        self.FS.set_variable("z", z)
+
+        fuzz_values = self.FS.inference()
+        return fuzz_values
+
+    def set_spatial_map_values(self, spatial_map_values):
+        for space, value in spatial_map_values.items():
+            devices = self.attr_indexed_output_devices[space]
+            for d in devices:
+                r = self.output_devices[d].get_value("r")
+                g = self.output_devices[d].get_value("g")
+                b = self.output_devices[d].get_value("b")
+                r = r + value / 2
+                g = g + value / 2
+                b = b + value / 2
+                self.output_devices[d].set_value("r", value)
+                self.output_devices[d].set_value("g", value)
+                self.output_devices[d].set_value("b", value)
+
+    def send_update(self):
+        for d, device in self.output_devices.items():
+            r = self.output_devices[d].get_value("r")
+            g = self.output_devices[d].get_value("g")
+            b = self.output_devices[d].get_value("b")
+            self.send_channel_message(d, "r", r)
+            self.send_channel_message(d, "g", g)
+            self.send_channel_message(d, "b", b)
