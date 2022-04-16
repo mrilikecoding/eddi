@@ -1,5 +1,6 @@
 import json
 import simpful as sf
+import matplotlib.pyplot as plt
 from src.controller import Controller
 
 
@@ -8,13 +9,13 @@ class SpatialLightController(Controller):
         # define the default min/max x,y,z input values
         # these will be used to determine degree of membership
         # for fuzzy logic
-        self.space_max_x = 400.0
+        self.space_max_x = 600.0
         self.space_max_y = 150.0
         self.space_max_z = 1000.0
         self.space_min_x = 0.0
         self.space_min_y = 0.0
         self.space_min_z = 0.0
-        self.self_calibrate = True  # set the max bounds based on incoming data
+        self.self_calibrate = False  # set the max bounds based on incoming data
 
         self.output_devices = output_devices
 
@@ -47,53 +48,55 @@ class SpatialLightController(Controller):
 
         # set up Fuzzy logic
         self.FS = sf.FuzzySystem()
-        TLV = sf.AutoTriangle(
-            3, terms=["low", "mid", "high"], universe_of_discourse=[0, 1]
-        )
-        # Sigmoid
-        # S_1 = sf.InvSigmoidFuzzySet(c=0.5, a=0.2, term="low")
-        # S_2 = sf.SigmoidFuzzySet(c=0.5, a=0.2, term="high")
-        # sf.LinguisticVariable([S_1, S_2], universe_of_discourse=[0, 1])
+        D1 = sf.FuzzySet(points=[[0.0, 1.0], [0.5, 0.0]], term="low")
+        D2 = sf.FuzzySet(points=[[0.0, 0.0], [0.5, 1.0], [1.0, 0.0]], term="mid")
+        D3 = sf.FuzzySet(points=[[0.0, 0.0], [0.5, 0.0], [1.0, 1.0]], term="high")
+        for d in ["x", "y", "z"]:
+            self.FS.add_linguistic_variable(
+                d,
+                sf.LinguisticVariable(
+                    [D1, D2, D3],
+                    concept=f"Where {d} falls in defined min/max range",
+                    universe_of_discourse=[0, 1],
+                ),
+            )
 
-        # TODO need to do multiple people additively - normalize?
-        # inputs for x, y, z head position
-        self.FS.add_linguistic_variable("x", TLV)
-        self.FS.add_linguistic_variable("y", TLV)
-        self.FS.add_linguistic_variable("z", TLV)
-        # self.FS.add_linguistic_variable("x", S_1)
-        # self.FS.add_linguistic_variable("x", S_2)
-        # self.FS.add_linguistic_variable("y", S_1)
-        # self.FS.add_linguistic_variable("y", S_2)
-        # self.FS.add_linguistic_variable("z", S_1)
-        # self.FS.add_linguistic_variable("z", S_2)
-
-        # relative distance
-        self.FS.set_crisp_output_value("low", 0.0)
-        self.FS.set_crisp_output_value("mid", 0.5)
-        self.FS.set_crisp_output_value("high", 1.0)
+        I1 = sf.FuzzySet(points=[[0.0, 1.0], [0.5, 0.0]], term="zero")
+        I2 = sf.FuzzySet(points=[[0.0, 0.0], [0.5, 1.0], [1.0, 0.0]], term="half")
+        I3 = sf.FuzzySet(points=[[0.0, 0.0], [0.5, 0.0], [1.0, 1.0]], term="full")
+        for spatial_category in self.spatial_categories:
+            self.FS.add_linguistic_variable(
+                spatial_category,
+                sf.LinguisticVariable(
+                    [I1, I2, I3],
+                    concept=f"Intensity value for {spatial_category}",
+                    universe_of_discourse=[0, 1],
+                ),
+            )
 
         self.FS.add_rules(
             [
-                "IF (x IS low) THEN (left IS high)",
-                "IF (x IS mid) THEN (left IS mid)",
-                "IF (x IS high) THEN (left IS low)",
-                "IF (x IS low) THEN (right IS low)",
-                "IF (x IS mid) THEN (right IS mid)",
-                "IF (x IS high) THEN (right IS high)",
-                "IF (y IS low) THEN (bottom IS high)",
-                "IF (y IS low) THEN (middle IS mid)",
-                "IF (y IS mid) THEN (bottom IS mid)",
-                "IF (y IS high) THEN (bottom IS low)",
-                "IF (y IS mid) THEN (middle IS high)",
-                "IF (y IS mid) THEN (top IS mid)",
-                "IF (y IS low) THEN (top IS low)",
-                "IF (y IS high) THEN (top IS high)",
-                "IF (z IS low) THEN (front IS high)",
-                "IF (z IS mid) THEN (front IS mid)",
-                "IF (z IS high) THEN (front IS low)",
-                "IF (z IS low) THEN (back IS low)",
-                "IF (z IS mid) THEN (back IS mid)",
-                "IF (z IS high) THEN (back IS high)",
+                "IF (x IS low) THEN (left IS full)",
+                "IF (x IS high) THEN (left IS zero)",
+                "IF (x IS mid) THEN (left IS half)",
+                "IF (x IS mid) THEN (right IS half)",
+                "IF (x IS low) THEN (right IS zero)",
+                "IF (x IS high) THEN (right IS full)",
+                # "IF (x IS mid) THEN (right IS mid)",
+                # "IF (y IS low) THEN (bottom IS high)",
+                # "IF (y IS low) THEN (middle IS mid)",
+                # "IF (y IS mid) THEN (bottom IS mid)",
+                # "IF (y IS high) THEN (bottom IS low)",
+                # "IF (y IS mid) THEN (middle IS high)",
+                # "IF (y IS mid) THEN (top IS mid)",
+                # "IF (y IS low) THEN (top IS low)",
+                # "IF (y IS high) THEN (top IS high)",
+                # "IF (z IS low) THEN (front IS high)",
+                # "IF (z IS mid) THEN (front IS mid)",
+                # "IF (z IS high) THEN (front IS low)",
+                # "IF (z IS low) THEN (back IS low)",
+                # "IF (z IS mid) THEN (back IS mid)",
+                # "IF (z IS high) THEN (back IS high)",
             ]
         )
 
@@ -145,7 +148,6 @@ class SpatialLightController(Controller):
                 z = attrs["head"]["z"]
                 if self.self_calibrate:
                     self.calibrate_min_max(x, y, z)
-
                 x, y, z = self.normalize_3d_point(x, y, z)
                 fuzzy_spatial_map = self.get_fuzzy_output(person_id, x, y, z)
                 self.set_spatial_map_values(fuzzy_spatial_map)
@@ -153,10 +155,11 @@ class SpatialLightController(Controller):
 
     def get_fuzzy_output(self, uid, x, y, z):
         self.FS.set_variable("x", x)
-        self.FS.set_variable("y", y)
-        self.FS.set_variable("z", z)
+        self.FS.set_variable("x", y)
+        self.FS.set_variable("x", z)
 
         fuzz_values = self.FS.inference()
+        # return {"left": x, "right": 1 - x}
         return fuzz_values
 
     def set_spatial_map_values(self, spatial_map_values):
