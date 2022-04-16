@@ -29,6 +29,11 @@ PVector confidenceVector = new PVector();
 
 void setup()
 {
+  // limit frame rate to compensate for lumi computation
+  // TODO maybe theres a way to dynamically update this from
+  // lumi via OSC depending on the time lumi is taking...
+  frameRate(30);
+
   // start a new kinect object
   kinect = new SimpleOpenNI(this);
 
@@ -61,12 +66,10 @@ void draw(){
   // update the camera
   kinect.update();
   // get Kinect data
-  kinectDepth = kinect.depthImage();
+  kinectDepth = kinect.rgbImage();
   // draw depth image at coordinates (0,0)
   image(kinectDepth,0,0);
   
-  PImage rgb = kinect.rgbImage();
-
   // get all user IDs of tracked users
   userID = kinect.getUsers();
 

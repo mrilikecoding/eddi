@@ -80,7 +80,7 @@ class Lumi:
         while True:
             # TODO find something useful put here, like keys for quitting
             self.update()  # if we want to do other stuff...
-            await asyncio.sleep(1 / 500)  # FPS
+            await asyncio.sleep(1 / 60)  # FPS
 
     async def init_main(self, port, ip):
         dispatcher = self.input_dispatcher
