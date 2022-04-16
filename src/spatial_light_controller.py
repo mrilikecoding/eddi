@@ -10,11 +10,11 @@ class SpatialLightController(Controller):
         # these will be used to determine degree of membership
         # for fuzzy logic
         self.space_max_x = 600.0
-        self.space_max_y = 150.0
-        self.space_max_z = 1000.0
-        self.space_min_x = 0.0
-        self.space_min_y = 0.0
-        self.space_min_z = 0.0
+        self.space_max_y = 400.0
+        self.space_max_z = 2700.0
+        self.space_min_x = 200.0
+        self.space_min_y = 150.0
+        self.space_min_z = 1500.0
         self.self_calibrate = False  # set the max bounds based on incoming data
 
         self.output_devices = output_devices
@@ -46,6 +46,7 @@ class SpatialLightController(Controller):
         except Exception as e:
             print("No device config file found", e)
 
+        # TODO this takes too long - seems to take between 0.16 and 0.25 s to complete
         # set up Fuzzy logic
         self.FS = sf.FuzzySystem()
         D1 = sf.FuzzySet(points=[[0.0, 1.0], [0.5, 0.0]], term="low")
@@ -134,6 +135,18 @@ class SpatialLightController(Controller):
             self.space_min_z = z
 
     def normalize_3d_point(self, x, y, z):
+        if x > self.space_max_x:
+            x = self.space_max_x
+        if y > self.space_max_y:
+            y = self.space_max_y
+        if z > self.space_max_z:
+            z = self.space_max_z
+        if x < self.space_min_x:
+            x = self.space_min_x
+        if y < self.space_min_y:
+            y = self.space_min_y
+        if z < self.space_min_z:
+            z = self.space_min_z
         x_norm = (x - self.space_min_x) / (self.space_max_x - self.space_min_x)
         y_norm = (y - self.space_min_y) / (self.space_max_y - self.space_min_y)
         z_norm = (z - self.space_min_z) / (self.space_max_z - self.space_min_z)
@@ -146,6 +159,7 @@ class SpatialLightController(Controller):
                 x = attrs["head"]["x"]
                 y = attrs["head"]["y"]
                 z = attrs["head"]["z"]
+                # print(x, y, z)
                 if self.self_calibrate:
                     self.calibrate_min_max(x, y, z)
                 x, y, z = self.normalize_3d_point(x, y, z)
@@ -154,13 +168,23 @@ class SpatialLightController(Controller):
         self.send_update()
 
     def get_fuzzy_output(self, uid, x, y, z):
-        self.FS.set_variable("x", x)
-        self.FS.set_variable("x", y)
-        self.FS.set_variable("x", z)
+        # self.FS.set_variable("x", x)
+        # self.FS.set_variable("x", y)
+        # self.FS.set_variable("x", z)
 
-        fuzz_values = self.FS.inference()
-        # return {"left": x, "right": 1 - x}
-        return fuzz_values
+        # fuzz_values = self.FS.inference()
+        # return fuzz_values
+        # TODO just running a crude fuzzy pattern for now
+        # will try another lib or just define simple DOM funcs
+        # since these are relatively simple mappings...
+        return {
+            "back": z,
+            "front": 1 - z,
+            "top": 1 - y,
+            "bottom": y,
+            "right": 1 - x,
+            "left": x,
+        }
 
     def set_spatial_map_values(self, spatial_map_values):
         for space, value in spatial_map_values.items():
