@@ -34,6 +34,8 @@ void setup()
 
   // enable depth sensor
   kinect.enableDepth();
+  
+  kinect.enableRGB();
 
   // enable skeleton generation for all joints
   kinect.enableUser();
@@ -46,7 +48,7 @@ void setup()
   // create a window the size of the depth information
   size(640, 480);
 
-  /* start oscP5, listening for incoming messages at port 12000 */
+  /* start osc send server on port 12000 */
   oscP5 = new OscP5(this,12000);
   oscSendServer = new NetAddress("127.0.0.1",12000);
   /* send an OSC message to this sketch */
@@ -62,6 +64,8 @@ void draw(){
   kinectDepth = kinect.depthImage();
   // draw depth image at coordinates (0,0)
   image(kinectDepth,0,0);
+  
+  PImage rgb = kinect.rgbImage();
 
   // get all user IDs of tracked users
   userID = kinect.getUsers();
