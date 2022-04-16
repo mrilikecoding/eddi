@@ -3,7 +3,7 @@
         "right": false,
         "left": true,
         "back": false,
-        "front": false,
+        "front": true,
         "top": true,
         "middle": false,
         "bottom": false,
@@ -17,7 +17,7 @@
         "right": false,
         "left": true,
         "back": false,
-        "front": false,
+        "front": true,
         "top": true,
         "middle": false,
         "bottom": false,
@@ -31,7 +31,7 @@
         "right": false,
         "left": true,
         "back": false,
-        "front": false,
+        "front": true,
         "top": true,
         "middle": false,
         "bottom": false,
@@ -45,7 +45,7 @@
         "right": false,
         "left": true,
         "back": false,
-        "front": false,
+        "front": true,
         "top": true,
         "middle": false,
         "bottom": false
@@ -53,7 +53,7 @@
     "d05": {
         "right": false,
         "left": true,
-        "back": false,
+        "back": true,
         "front": false,
         "top": true,
         "middle": false,
@@ -67,7 +67,7 @@
     "d06": {
         "right": false,
         "left": true,
-        "back": false,
+        "back": true,
         "front": false,
         "top": true,
         "middle": false,
@@ -81,7 +81,7 @@
     "d07": {
         "right": false,
         "left": true,
-        "back": false,
+        "back": true,
         "front": false,
         "top": true,
         "middle": false,
@@ -95,7 +95,7 @@
     "d08": {
         "right": false,
         "left": true,
-        "back": false,
+        "back": true,
         "front": false,
         "top": true,
         "middle": false,
@@ -109,7 +109,7 @@
     "d09": {
         "right": true,
         "left": false,
-        "back": false,
+        "back": true,
         "front": false,
         "top": true,
         "middle": false,
@@ -123,7 +123,7 @@
     "d10": {
         "right": true,
         "left": false,
-        "back": false,
+        "back": true,
         "front": false,
         "top": true,
         "middle": false,
@@ -137,7 +137,7 @@
     "d11": {
         "right": true,
         "left": false,
-        "back": false,
+        "back": true,
         "front": false,
         "top": true,
         "middle": false,
@@ -151,7 +151,7 @@
     "d12": {
         "right": true,
         "left": false,
-        "back": false,
+        "back": true,
         "front": false,
         "top": true,
         "middle": false,
@@ -166,7 +166,7 @@
         "right": true,
         "left": false,
         "back": false,
-        "front": false,
+        "front": true,
         "top": true,
         "middle": false,
         "bottom": false,
@@ -180,7 +180,7 @@
         "right": true,
         "left": false,
         "back": false,
-        "front": false,
+        "front": true,
         "top": true,
         "middle": false,
         "bottom": false,
@@ -194,7 +194,7 @@
         "right": true,
         "left": false,
         "back": false,
-        "front": false,
+        "front": true,
         "top": true,
         "middle": false,
         "bottom": false,
@@ -208,7 +208,7 @@
         "right": true,
         "left": false,
         "back": false,
-        "front": false,
+        "front": true,
         "top": true,
         "middle": false,
         "bottom": false,
@@ -219,10 +219,10 @@
         ]
     },
     "s1": {
-        "right": true,
-        "left": false,
+        "right": false,
+        "left": true,
         "back": false,
-        "front": false,
+        "front": true,
         "top": false,
         "middle": true,
         "bottom": false,
@@ -234,10 +234,10 @@
         ]
     },
     "s2": {
-        "right": false,
-        "left": true,
+        "right": true,
+        "left": false,
         "back": false,
-        "front": false,
+        "front": true,
         "top": false,
         "middle": true,
         "bottom": false,
@@ -249,8 +249,8 @@
         ]
     },
     "f1": {
-        "right": true,
-        "left": false,
+        "right": false,
+        "left": true,
         "back": false,
         "front": true,
         "top": false,
@@ -264,6 +264,21 @@
         ]
     },
     "f2": {
+        "right": false,
+        "left": true,
+        "back": true,
+        "front": false,
+        "top": false,
+        "middle": false,
+        "bottom": true,
+        "channels": [
+            "r",
+            "g",
+            "b",
+            "u"
+        ]
+    },
+    "f3": {
         "right": true,
         "left": false,
         "back": true,
@@ -278,24 +293,9 @@
             "u"
         ]
     },
-    "f3": {
-        "right": false,
-        "left": true,
-        "back": true,
-        "front": false,
-        "top": false,
-        "middle": false,
-        "bottom": true,
-        "channels": [
-            "r",
-            "g",
-            "b",
-            "u"
-        ]
-    },
     "f4": {
-        "right": false,
-        "left": true,
+        "right": true,
+        "left": false,
         "back": false,
         "front": true,
         "top": false,
