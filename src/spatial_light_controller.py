@@ -38,6 +38,7 @@ class SpatialLightController(Controller):
             "front",
             "middle",
         ]
+        self.primary_axis = ["left", "right"]
         try:
             f = open("spatial_device_configuration.json")
             device_config = json.load(f)
@@ -45,61 +46,6 @@ class SpatialLightController(Controller):
             self.device_config = device_config
         except Exception as e:
             print("No device config file found", e)
-
-        # TODO this takes too long - seems to take between 0.16 and 0.25 s to complete
-        # set up Fuzzy logic
-        self.FS = sf.FuzzySystem()
-        D1 = sf.FuzzySet(points=[[0.0, 1.0], [0.5, 0.0]], term="low")
-        D2 = sf.FuzzySet(points=[[0.0, 0.0], [0.5, 1.0], [1.0, 0.0]], term="mid")
-        D3 = sf.FuzzySet(points=[[0.0, 0.0], [0.5, 0.0], [1.0, 1.0]], term="high")
-        for d in ["x", "y", "z"]:
-            self.FS.add_linguistic_variable(
-                d,
-                sf.LinguisticVariable(
-                    [D1, D2, D3],
-                    concept=f"Where {d} falls in defined min/max range",
-                    universe_of_discourse=[0, 1],
-                ),
-            )
-
-        I1 = sf.FuzzySet(points=[[0.0, 1.0], [0.5, 0.0]], term="zero")
-        I2 = sf.FuzzySet(points=[[0.0, 0.0], [0.5, 1.0], [1.0, 0.0]], term="half")
-        I3 = sf.FuzzySet(points=[[0.0, 0.0], [0.5, 0.0], [1.0, 1.0]], term="full")
-        for spatial_category in self.spatial_categories:
-            self.FS.add_linguistic_variable(
-                spatial_category,
-                sf.LinguisticVariable(
-                    [I1, I2, I3],
-                    concept=f"Intensity value for {spatial_category}",
-                    universe_of_discourse=[0, 1],
-                ),
-            )
-
-        self.FS.add_rules(
-            [
-                "IF (x IS low) THEN (left IS full)",
-                "IF (x IS high) THEN (left IS zero)",
-                "IF (x IS mid) THEN (left IS half)",
-                "IF (x IS mid) THEN (right IS half)",
-                "IF (x IS low) THEN (right IS zero)",
-                "IF (x IS high) THEN (right IS full)",
-                # "IF (x IS mid) THEN (right IS mid)",
-                # "IF (y IS low) THEN (bottom IS high)",
-                # "IF (y IS low) THEN (middle IS mid)",
-                # "IF (y IS mid) THEN (bottom IS mid)",
-                # "IF (y IS high) THEN (bottom IS low)",
-                # "IF (y IS mid) THEN (middle IS high)",
-                # "IF (y IS mid) THEN (top IS mid)",
-                # "IF (y IS low) THEN (top IS low)",
-                # "IF (y IS high) THEN (top IS high)",
-                # "IF (z IS low) THEN (front IS high)",
-                # "IF (z IS mid) THEN (front IS mid)",
-                # "IF (z IS high) THEN (front IS low)",
-                # "IF (z IS low) THEN (back IS low)",
-                # "IF (z IS mid) THEN (back IS mid)",
-                # "IF (z IS high) THEN (back IS high)",
-            ]
-        )
 
     def set_output_devices(self, output_devices):
         self.output_devices = output_devices
@@ -159,53 +105,74 @@ class SpatialLightController(Controller):
                 x = attrs["head"]["x"]
                 y = attrs["head"]["y"]
                 z = attrs["head"]["z"]
-                # print(x, y, z)
                 if self.self_calibrate:
                     self.calibrate_min_max(x, y, z)
                 x, y, z = self.normalize_3d_point(x, y, z)
-                fuzzy_spatial_map = self.get_fuzzy_output(person_id, x, y, z)
+                fuzzy_spatial_map = self.get_fuzzy_output(x, y, z)
                 self.set_spatial_map_values(fuzzy_spatial_map)
         self.send_update()
 
     def fuzzy_log(self, x):
         # assume 0-1
-        return x**2
+        if x < 0:
+            x = 0
+        if x > 1:
+            x = 1
+        return x**3
 
-    def get_fuzzy_output(self, uid, x, y, z):
-        # self.FS.set_variable("x", x)
-        # self.FS.set_variable("x", y)
-        # self.FS.set_variable("x", z)
-
-        # fuzz_values = self.FS.inference()
-        # return fuzz_values
+    def get_fuzzy_output(self, x, y, z):
         # TODO just running a crude fuzzy pattern for now
         # will try another lib or just define simple DOM funcs
         # since these are relatively simple mappings...
-        return {
-            "back": self.fuzzy_log(z),
-            "front": 1 - self.fuzzy_log(z),
-            "top": 1 - self.fuzzy_log(y),
-            "bottom": self.fuzzy_log(y),
-            "right": 1 - self.fuzzy_log(x),
-            "left": self.fuzzy_log(x),
+        right = round(self.fuzzy_log(x), 2)
+        left = 1.0 - right
+        bottom = round(self.fuzzy_log(y), 2)
+        top = 1.0 - bottom
+        back = round(self.fuzzy_log(z), 2)
+        front = 1.0 - back
+        middle = (top + bottom) / 2
+        output = {
+            "back": back,
+            "front": front,
+            "bottom": bottom,
+            "top": top,
+            "right": right,
+            "left": left ,
+            "middle": middle
         }
+        return output
 
     def set_spatial_map_values(self, spatial_map_values):
-        for space, value in spatial_map_values.items():
-            devices = self.attr_indexed_output_devices[space]
-            for d in devices:
+        for location in self.primary_axis:
+            for d in self.attr_indexed_output_devices[location]:
+                value = spatial_map_values[location]
                 r = self.output_devices[d].get_value("r")
                 g = self.output_devices[d].get_value("g")
                 b = self.output_devices[d].get_value("b")
-                r = r + value / 2
-                g = g + value / 2
-                b = b + value / 2
-                self.output_devices[d].set_value("r", value)
-                self.output_devices[d].set_value("g", value)
-                self.output_devices[d].set_value("b", value)
+                r = (r + value) / 2
+                g = (g + value) / 2
+                b = (b + value) / 2
+                self.output_devices[d].set_value("r", r)
+                self.output_devices[d].set_value("g", g)
+                self.output_devices[d].set_value("b", b)
+
+        for location in self.spatial_categories:
+            if location in self.primary_axis:
+                continue
+            value = spatial_map_values[location]
+            for d in self.attr_indexed_output_devices[location]:
+                r = self.output_devices[d].get_value("r")
+                g = self.output_devices[d].get_value("g")
+                b = self.output_devices[d].get_value("b")
+                r = r * value
+                g = g * value
+                b = b * value
+                self.output_devices[d].set_value("r", r)
+                self.output_devices[d].set_value("g", g)
+                self.output_devices[d].set_value("b", b)
 
     def send_update(self):
-        for d, device in self.output_devices.items():
+        for d in self.output_devices.keys():
             r = self.output_devices[d].get_value("r")
             g = self.output_devices[d].get_value("g")
             b = self.output_devices[d].get_value("b")
