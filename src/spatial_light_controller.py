@@ -1,6 +1,4 @@
 import json
-import simpful as sf
-import matplotlib.pyplot as plt
 from src.controller import Controller
 
 
@@ -9,11 +7,11 @@ class SpatialLightController(Controller):
         # define the default min/max x,y,z input values
         # these will be used to determine degree of membership
         # for fuzzy logic
-        self.space_max_x = 600.0
-        self.space_max_y = 400.0
+        self.space_max_x = 625.0
+        self.space_max_y = 300.0
         self.space_max_z = 2700.0
-        self.space_min_x = 200.0
-        self.space_min_y = 150.0
+        self.space_min_x = 120.0
+        self.space_min_y = 130.0
         self.space_min_z = 1500.0
         self.self_calibrate = False  # set the max bounds based on incoming data
 
@@ -101,10 +99,10 @@ class SpatialLightController(Controller):
     def update_input(self, object_instance):
         for person, attrs in object_instance.people.items():
             if "head" in attrs:
-                person_id = person
                 x = attrs["head"]["x"]
                 y = attrs["head"]["y"]
                 z = attrs["head"]["z"]
+                # print(x, y, z)
                 if self.self_calibrate:
                     self.calibrate_min_max(x, y, z)
                 x, y, z = self.normalize_3d_point(x, y, z)
@@ -137,8 +135,8 @@ class SpatialLightController(Controller):
             "bottom": bottom,
             "top": top,
             "right": right,
-            "left": left ,
-            "middle": middle
+            "left": left,
+            "middle": middle,
         }
         return output
 
