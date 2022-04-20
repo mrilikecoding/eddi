@@ -167,6 +167,10 @@ class SpatialLightController(Controller):
                 self.set_spatial_map_values(fuzzy_spatial_map)
         self.send_update()
 
+    def fuzzy_log(self, x):
+        # assume 0-1
+        return x**2
+
     def get_fuzzy_output(self, uid, x, y, z):
         # self.FS.set_variable("x", x)
         # self.FS.set_variable("x", y)
@@ -178,12 +182,12 @@ class SpatialLightController(Controller):
         # will try another lib or just define simple DOM funcs
         # since these are relatively simple mappings...
         return {
-            "back": z,
-            "front": 1 - z,
-            "top": 1 - y,
-            "bottom": y,
-            "right": 1 - x,
-            "left": x,
+            "back": self.fuzzy_log(z),
+            "front": 1 - self.fuzzy_log(z),
+            "top": 1 - self.fuzzy_log(y),
+            "bottom": self.fuzzy_log(y),
+            "right": 1 - self.fuzzy_log(x),
+            "left": self.fuzzy_log(x),
         }
 
     def set_spatial_map_values(self, spatial_map_values):
