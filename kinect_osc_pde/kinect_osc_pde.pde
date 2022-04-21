@@ -13,8 +13,21 @@ int[] userID;
 // user colors
 color[] userColor = new color[]{ color(255,0,0), color(0,255,0), color(0,0,255), color(255,255,0), color(255,0,255), color(0,255,255)};
 
+// set up some calibration params
+// TODO would be great to pass these in as args
+// int closestValue;
+// int closestX;
+// int closestY;
+// int farthestValue;
+// int farthestX;
+// int farthestY;
+
+
 // postion of head to draw circle
-PVector headPosition = new PVector();
+PVector headPosition = new PVector(0, 0, 0);
+// linear interpolate from previous position
+PVector lastHeadPosition = new PVector(0, 0, 0);
+
 // turn headPosition into scalar form
 float distanceScalar;
 // diameter of head drawn in pixels
@@ -29,9 +42,13 @@ PVector confidenceVector = new PVector();
 
 void setup()
 {
-  // limit frame rate to compensate for lumi computation
+  // create a window the size of the depth information
+  size(1280, 480);
+
   // TODO maybe theres a way to dynamically update this from
   // lumi via OSC depending on the time lumi is taking...
+  // limit frame rate to compensate for lumi computation
+  // the kinect v1 captures at 30 FPS
   frameRate(30);
 
   // start a new kinect object
@@ -39,7 +56,6 @@ void setup()
 
   // enable depth sensor
   kinect.enableDepth();
-  
   kinect.enableRGB();
 
   // enable skeleton generation for all joints
@@ -49,9 +65,6 @@ void setup()
   strokeWeight(3);
   // smooth out drawing
   smooth();
-
-  // create a window the size of the depth information
-  size(640, 480);
 
   /* start osc send server on port 12000 */
   oscP5 = new OscP5(this,12000);
@@ -63,12 +76,35 @@ void setup()
 //Updates Kinect. Gets users tracking and draws skeleton and head if confidence of tracking is above threshold
 
 void draw(){
+  background(0);
   // update the camera
+  closestValue = 8000;
+
   kinect.update();
-  // get Kinect data
-  kinectDepth = kinect.rgbImage();
+  // int[] depthValues = kinect.depthMap();
+
+  // for (int y = 0; y < 480; y++){
+  //   for (int x = 0; x < 640; x++){
+  //     // reverse x by moving from right side of image
+  //     int reversedX = 640 - x - 1;
+  //     int i = reversedX + y * 640; // mult by 640 to access right depth array row
+  //     int currentDepthValue = depthValues[i];
+      
+  //     // only look for values within range
+  //     if (
+  //       currentDepthValue > 610 && 
+  //       currentDepthValue < 1525 && 
+  //       currentDepthValue < closestValue) {
+  //         closestValue = currentDepthValue;
+  //         closestX = x;
+  //         closestY = y;
+  //     }
+  //   }
+  // }
+
   // draw depth image at coordinates (0,0)
-  image(kinectDepth,0,0);
+  image(kinect.depthImage(),0,0);
+  image(kinect.rgbImage(), 640,0);
   
   // get all user IDs of tracked users
   userID = kinect.getUsers();
@@ -110,10 +146,13 @@ void drawSkeleton(int userId){
   // convert real world point to projective space
   kinect.convertRealWorldToProjective(headPosition,headPosition);
   // create a distance scalar related to the depth in z dimension
-  distanceScalar = (225/headPosition.z);
 
-  // draw the circle at the position of the head with the head size scaled by the distance scalar
-  ellipse(headPosition.x,headPosition.y, distanceScalar*headSize,distanceScalar*headSize);
+  float interpolatedHeadX = lerp(lastHeadPosition.x, headPosition.x, 1.0f);
+  float interpolatedHeadY = lerp(lastHeadPosition.y, headPosition.y, 1.0f);
+  float interpolatedHeadZ = lerp(lastHeadPosition.z, headPosition.z, 1.0f);
+  distanceScalar = (225/lastHeadPosition.z);
+  ellipse(lastHeadPosition.x,lastHeadPosition.y, distanceScalar*headSize,distanceScalar*headSize);
+  lastHeadPosition = new PVector(interpolatedHeadX, interpolatedHeadY, interpolatedHeadZ);
 
   //draw limb from head to neck
   //kinect.drawLimb(userId, SimpleOpenNI.SKEL_HEAD, SimpleOpenNI.SKEL_NECK);
@@ -160,3 +199,11 @@ void onLostUser(SimpleOpenNI curContext, int userId){
 
 void onVisibleUser(SimpleOpenNI curContext, int userId){
 } //void onVisibleUser(SimpleOpenNI curContext, int userId)
+
+void mousePressed(){
+  int[] depthValues = kinect.depthMap();
+  int clickPosition = mouseX + (mouseY * 640);
+  int clickedDepth = depthValues[clickPosition];
+  float inches = clickedDepth / 25.4;
+  println("inches: " + inches);
+}
