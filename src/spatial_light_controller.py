@@ -7,12 +7,12 @@ class SpatialLightController(Controller):
         # define the default min/max x,y,z input values
         # these will be used to determine degree of membership
         # for fuzzy logic
-        self.space_max_x = 625.0
-        self.space_max_y = 300.0
-        self.space_max_z = 2700.0
-        self.space_min_x = 120.0
-        self.space_min_y = 130.0
-        self.space_min_z = 1500.0
+        self.space_max_x = 500.0
+        self.space_min_x = 100.0
+        self.space_max_y = 378.0
+        self.space_min_y = 100.0
+        self.space_max_z = 2950.0
+        self.space_min_z = 1400.0
         self.self_calibrate = False  # set the max bounds based on incoming data
 
         self.output_devices = output_devices
@@ -102,7 +102,7 @@ class SpatialLightController(Controller):
                 x = attrs["head"]["x"]
                 y = attrs["head"]["y"]
                 z = attrs["head"]["z"]
-                # print(x, y, z)
+                print(x, y, z)
                 if self.self_calibrate:
                     self.calibrate_min_max(x, y, z)
                 x, y, z = self.normalize_3d_point(x, y, z)
@@ -141,6 +141,9 @@ class SpatialLightController(Controller):
         return output
 
     def set_spatial_map_values(self, spatial_map_values):
+        """
+        The primary axis is a carrier and is modified by other axes
+        """
         for location in self.primary_axis:
             for d in self.attr_indexed_output_devices[location]:
                 value = spatial_map_values[location]
