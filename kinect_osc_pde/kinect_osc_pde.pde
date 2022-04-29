@@ -143,17 +143,17 @@ void draw(){
       // int targetPosition = skeletonPositionKey.get("head");
       for (int j = 0; j < positionLabels.length; j++) {
         String positionLabel = positionLabels[j];
-        confidence = kinect.getJointPositionSkeleton(userIDs[i], getSkeletonPositionKey(positionLabel), confidenceVector);
+        confidence = kinect.getJointPositionSkeleton(userIDs[i], getSkeletonPositionKey(positionLabel), positionVector);
         if (confidence > confidenceLevel) {
-          sendOSCPositionMessage(userID, positionLabel, confidenceVector);
+          sendOSCPositionMessage(userID, positionLabel, positionVector);
           // change draw color based on hand id#
           stroke(userColor[(i)]);
           // fill the ellipse with the same color
           fill(userColor[(i)]);
 
-          kinect.convertRealWorldToProjective(confidenceVector, confidenceVector);
-          distanceScalar = (225/confidenceVector.z);
-          ellipse(confidenceVector.x, confidenceVector.y, distanceScalar*headSize,distanceScalar*headSize);
+          kinect.convertRealWorldToProjective(positionVector, positionVector);
+          distanceScalar = (225/positionVector.z);
+          ellipse(positionVector.x, positionVector.y, distanceScalar*headSize,distanceScalar*headSize);
 
           // draw the rest of the body
           // drawSkeleton(userIDs[i]);

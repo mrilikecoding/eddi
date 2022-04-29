@@ -97,6 +97,7 @@ class SpatialLightController(Controller):
         return x_norm, y_norm, z_norm
 
     def update_input(self, object_instance):
+        print(object_instance)
         for person, attrs in object_instance.people.items():
             if "head" in attrs:
                 x = attrs["head"]["x"]
