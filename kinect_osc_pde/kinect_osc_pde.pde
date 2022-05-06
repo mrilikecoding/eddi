@@ -17,26 +17,18 @@ int[] userMap;
 // user colors
 color[] userColor = new color[]{ color(255,0,0), color(0,255,0), color(0,0,255), color(255,255,0), color(255,0,255), color(0,255,255)};
 
-// postion of head to draw circle
-PVector headPosition = new PVector(0, 0, 0);
-// linear interpolate from previous position
-PVector lastHeadPosition = new PVector(0, 0, 0);
-// postion of head to draw circle
-PVector torsoPosition = new PVector(0, 0, 0);
-// linear interpolate from previous position
-PVector lastTorsoPosition = new PVector(0, 0, 0);
-
-// turn headPosition into scalar form
+// turn joint distance into scalar form
 float distanceScalar;
-// diameter of head drawn in pixels
-float headSize = 100;
+// diameter of joint marker in pixels
+float jointMarkerSize = 100;
 
 // threshold of level of confidence
-float confidenceLevel = 0.5;
+float confidenceLevel = 0.6;
 // the current confidence level that the kinect is tracking
 float confidence;
-// vector of tracked position(s) for confidence checking
-PVector positionVector = new PVector();
+// vector of current tracked position(s) for confidence checking
+PVector currentPositionVector = new PVector();
+PVector lastPositionVector = new PVector();
 
 String[] positionLabels =  {
     "head", "neck", "leftShoulder", "leftElbow", "leftHand", "rightShoulder", "rightElbow",
@@ -45,12 +37,9 @@ String[] positionLabels =  {
 
 void setup()
 {
-  // create a window the size of the depth information
-  // size(1280, 480);
-
  String[] positionLabels =  {
     "head", "neck", "leftShoulder", "leftElbow", "leftHand", "rightShoulder", "rightElbow",
-    "rightHand", "torso", "leftHip", "rightHip", "leftKnee", "leftFoot", "rightFoot"
+    "rightHand", "torso", "leftHip", "rightHip", "leftKnee", "leftFoot", "rightKnee", "rightFoot"
   }; 
 
   // draw setup
@@ -66,7 +55,6 @@ void setup()
 
   // enable depth sensor
   kinect.enableDepth();
-  kinect.enableRGB();
 
   // enable skeleton generation for all joints
   kinect.enableUser();
@@ -119,7 +107,6 @@ int getSkeletonPositionKey(String position) {
   }
 }
 
-//Updates Kinect. Gets users tracking and draws skeleton and head if confidence of tracking is above threshold
 void sendOSCPositionMessage(int userID, String positionLabel, PVector position) {
   OscMessage messageOut = new OscMessage("/kinect/" + position);
   messageOut.add(userID);
@@ -131,6 +118,7 @@ void sendOSCPositionMessage(int userID, String positionLabel, PVector position) 
 
 void draw(){
   background(0);
+  image(kinect.depthImage(),0,0);
   // update the camera
   kinect.update();
     
@@ -143,47 +131,26 @@ void draw(){
       // int targetPosition = skeletonPositionKey.get("head");
       for (int j = 0; j < positionLabels.length; j++) {
         String positionLabel = positionLabels[j];
-        confidence = kinect.getJointPositionSkeleton(userIDs[i], getSkeletonPositionKey(positionLabel), positionVector);
+        // for this position label, get 3d position coords
+        confidence = kinect.getJointPositionSkeleton(userIDs[i], getSkeletonPositionKey(positionLabel), currentPositionVector);
         if (confidence > confidenceLevel) {
-          sendOSCPositionMessage(userID, positionLabel, positionVector);
           // change draw color based on hand id#
           stroke(userColor[(i)]);
           // fill the ellipse with the same color
           fill(userColor[(i)]);
 
-          kinect.convertRealWorldToProjective(positionVector, positionVector);
-          distanceScalar = (225/positionVector.z);
-          ellipse(positionVector.x, positionVector.y, distanceScalar*headSize,distanceScalar*headSize);
-
-          // draw the rest of the body
-          // drawSkeleton(userIDs[i]);
+          // convert real world coord to projective space
+          kinect.convertRealWorldToProjective(currentPositionVector, currentPositionVector);
+          currentPositionVector.lerp(lastPositionVector, 0.3f);
+          distanceScalar = (225/currentPositionVector.z);
+          ellipse(currentPositionVector.x, currentPositionVector.y, distanceScalar*jointMarkerSize, distanceScalar*jointMarkerSize);
+          sendOSCPositionMessage(userID, positionLabel, lastPositionVector);
+          lastPositionVector = currentPositionVector;
         }
       } //if(confidence > confidenceLevel)
     } //if(kinect.isTrackingSkeleton(userID[i]))
   } //for(int i=0;i<userID.length;i++)
 } // void draw()
-
-void drawSkeleton(int userId){
-   // get 3D position of head
-  kinect.getJointPositionSkeleton(userId, SimpleOpenNI.SKEL_HEAD,headPosition);
-  kinect.getJointPositionSkeleton(userId, SimpleOpenNI.SKEL_TORSO,torsoPosition);
-  // convert real world point to projective space
-  kinect.convertRealWorldToProjective(headPosition,headPosition);
-  kinect.convertRealWorldToProjective(torsoPosition,torsoPosition);
-  // create a distance scalar related to the depth in z dimension
-
-  float interpolatedHeadX = lerp(lastHeadPosition.x, headPosition.x, 1.0f);
-  float interpolatedHeadY = lerp(lastHeadPosition.y, headPosition.y, 1.0f);
-  float interpolatedHeadZ = lerp(lastHeadPosition.z, headPosition.z, 1.0f);
-  float interpolatedTorsoX = lerp(lastTorsoPosition.x, torsoPosition.x, 1.0f);
-  float interpolatedTorsoY = lerp(lastTorsoPosition.y, torsoPosition.y, 1.0f);
-  float interpolatedTorsoZ = lerp(lastTorsoPosition.z, torsoPosition.z, 1.0f);
-  distanceScalar = (225/lastHeadPosition.z);
-  ellipse(lastHeadPosition.x,lastHeadPosition.y, distanceScalar*headSize,distanceScalar*headSize);
-  ellipse(lastTorsoPosition.x,lastTorsoPosition.y, distanceScalar*headSize,distanceScalar*headSize);
-  lastHeadPosition = new PVector(interpolatedHeadX, interpolatedHeadY, interpolatedHeadZ);
-  lastTorsoPosition = new PVector(interpolatedTorsoX, interpolatedTorsoY, interpolatedTorsoZ);
-} // void drawSkeleton(int userId)
 
 void onNewUser(SimpleOpenNI curContext, int userId){
   // start tracking of user id
