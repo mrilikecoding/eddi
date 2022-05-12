@@ -65,9 +65,9 @@ void setup()
   smooth();
 
   // start osc send server on port 12000
-  oscP5 = new OscP5(this,12000);
+  oscP5 = new OscP5(this, 12001);
   oscSendServer = new NetAddress("127.0.0.1",12000);
-  oscP5.send("/kinect", new Object[] {"Kinect initialized in Processing"}, oscSendServer);
+  // oscP5.send("/kinect", new Object[] {"Kinect initialized in Processing"}, oscSendServer);
 } // void setup()
 
 int getSkeletonPositionKey(String position) {
@@ -108,11 +108,13 @@ int getSkeletonPositionKey(String position) {
 }
 
 void sendOSCPositionMessage(int userID, String positionLabel, PVector position) {
-  OscMessage messageOut = new OscMessage("/kinect/" + position);
+  OscMessage messageOut = new OscMessage("/kinect");
   messageOut.add(userID);
+  messageOut.add(positionLabel);
   messageOut.add(position.x);
   messageOut.add(position.y);
   messageOut.add(position.z);
+  println(messageOut);
   oscP5.send(messageOut, oscSendServer);
 }
 

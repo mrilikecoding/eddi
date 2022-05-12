@@ -20,20 +20,16 @@ class KinectInterface:
         This parses message received via osc and stores head x y z in a user key
         """
         try:
-            id = obj[0]
-            head_x = obj[1]
-            head_y = obj[2]
-            head_z = obj[3]
+            user_id, position, x, y, z = obj
+            if user_id not in self.people:
+                self.people[user_id] = {}
+            person = self.people[user_id]
             if id not in self.people:
                 self.people[id] = {}
 
             # update head
-            self.people[id]["head"] = {
-                "x": head_x,
-                "y": head_y,
-                "z": head_z,
-            }
+            person[position] = {"x": x, "y": y, "z": z }
         except Exception as e:
-            print(e)
+            print("Unable to parse OSC message for Kinect", e)
 
         self.update_callback(self)
