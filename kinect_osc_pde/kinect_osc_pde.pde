@@ -31,25 +31,31 @@ PVector currentPositionVector = new PVector();
 PVector lastPositionVector = new PVector();
 
 String[] positionLabels =  {
-    "head", "neck", "leftShoulder", "leftElbow", "leftHand", "rightShoulder", "rightElbow",
-    "rightHand", "torso", "leftHip", "rightHip", "leftKnee", "leftFoot", "rightFoot"
-  };
+  "head", 
+  "neck", 
+  "leftShoulder", 
+  "leftElbow", 
+  "leftHand", 
+  "rightShoulder", 
+  "rightElbow",
+  "rightHand", 
+  "torso", 
+  "leftHip", 
+  "rightHip", 
+  "leftKnee", 
+  "leftFoot", 
+  "rightFoot"
+};
 
 void setup()
 {
- String[] positionLabels =  {
-    "head", "neck", "leftShoulder", "leftElbow", "leftHand", "rightShoulder", "rightElbow",
-    "rightHand", "torso", "leftHip", "rightHip", "leftKnee", "leftFoot", "rightKnee", "rightFoot"
-  }; 
-
   // draw setup
   size(640, 480);
   // TODO maybe theres a way to dynamically update this from
   // lumi via OSC depending on the time lumi is taking...
   // limit frame rate to compensate for lumi computation
   // the kinect v1 captures at 30 FPS
-  frameRate(30);
-
+  frameRate(20);
   // start a new kinect object
   kinect = new SimpleOpenNI(this);
 
@@ -107,25 +113,16 @@ int getSkeletonPositionKey(String position) {
   }
 }
 
-void sendOSCPositionMessage(int userID, String positionLabel, PVector position) {
-  OscMessage messageOut = new OscMessage("/kinect");
-  messageOut.add(userID);
-  messageOut.add(positionLabel);
-  messageOut.add(position.x);
-  messageOut.add(position.y);
-  messageOut.add(position.z);
-  println(messageOut);
-  oscP5.send(messageOut, oscSendServer);
-}
-
 void draw(){
   background(0);
   image(kinect.depthImage(),0,0);
   // update the camera
   kinect.update();
     
+  OscMessage messageOut = new OscMessage("/kinect");
   userIDs = kinect.getUsers();
   // loop through each user to see if tracking
+  OscBundle updateBundle = new OscBundle();
   for(int i=0;i<userIDs.length;i++) {
     // if Kinect is tracking certain user then get joint vectors
     if(kinect.isTrackingSkeleton(userIDs[i])) {
@@ -146,12 +143,21 @@ void draw(){
           currentPositionVector.lerp(lastPositionVector, 0.3f);
           distanceScalar = (225/currentPositionVector.z);
           ellipse(currentPositionVector.x, currentPositionVector.y, distanceScalar*jointMarkerSize, distanceScalar*jointMarkerSize);
-          sendOSCPositionMessage(userID, positionLabel, lastPositionVector);
           lastPositionVector = currentPositionVector;
+          // add each position to an OSC bundle
+          messageOut.setAddrPattern("/kinect");
+          messageOut.add(userID);
+          messageOut.add(positionLabel);
+          messageOut.add(currentPositionVector.x);
+          messageOut.add(currentPositionVector.y);
+          messageOut.add(currentPositionVector.z);
+          updateBundle.add(messageOut);
+          messageOut.clear();
         }
       } //if(confidence > confidenceLevel)
     } //if(kinect.isTrackingSkeleton(userID[i]))
   } //for(int i=0;i<userID.length;i++)
+  oscP5.send(updateBundle, oscSendServer);
 } // void draw()
 
 void onNewUser(SimpleOpenNI curContext, int userId){

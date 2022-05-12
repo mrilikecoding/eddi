@@ -28,7 +28,7 @@ class KinectInterface:
                 self.people[id] = {}
 
             # update head
-            person[position] = {"x": x, "y": y, "z": z }
+            person[position] = {"x": x, "y": y, "z": z}
         except Exception as e:
             print("Unable to parse OSC message for Kinect", e)
 
