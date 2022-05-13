@@ -1,18 +1,33 @@
 class KinectInterface:
     """
     Input via OSC - specify the address prefix of messages from this device
+    This class keeps track of kinect position state for up to 6 people (according to kinect v1 spec)
+    Written assuming joint position coordinates (x, y, z) are send via osc messages
     """
 
-    def __init__(self, update_callback=lambda x: None):
+    def __init__(self):
         self.name = "kinect"
         self.osc_addr_prefix = "/kinect"
         self.people = {}  # track individual people
-        self.update_callback = update_callback
+        # what skeleton positions / joints are we interested in?
+        self.position_list = [
+            "head",
+            "neck",
+            "leftShoulder",
+            "leftElbow",
+            "leftHand",
+            "rightShoulder",
+            "rightElbow",
+            "rightHand",
+            "torso",
+            "leftHip",
+            "rightHip",
+            "leftKnee",
+            "leftFoot",
+            "rightFoot",
+        ]
 
-    def set_update_callback(self, cb):
-        self.update_callback = cb
-
-    def osc_update(self, unused_addr, *obj):
+    def update_from_osc(self, unused_addr, *obj):
         """
         Must conform to message handler signature
         unused_addr, *args
@@ -20,20 +35,14 @@ class KinectInterface:
         This parses message received via osc and stores head x y z in a user key
         """
         try:
-            id = obj[0]
-            head_x = obj[1]
-            head_y = obj[2]
-            head_z = obj[3]
-            if id not in self.people:
-                self.people[id] = {}
+            user_id, position, x, y, z = obj
+            if position not in self.position_list:
+                return
+            if user_id not in self.people:
+                self.people[user_id] = {}
+            person = self.people[user_id]
 
-            # update head
-            self.people[id]["head"] = {
-                "x": head_x,
-                "y": head_y,
-                "z": head_z,
-            }
+            # update position coordinates
+            person[position] = {"x": x, "y": y, "z": z}
         except Exception as e:
-            print(e)
-
-        self.update_callback(self)
+            print("Unable to parse OSC message for Kinect", e)
