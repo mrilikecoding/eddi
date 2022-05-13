@@ -1,4 +1,6 @@
 import json
+import time
+
 from src.controller import Controller
 
 
@@ -96,19 +98,17 @@ class SpatialLightController(Controller):
         z_norm = (z - self.space_min_z) / (self.space_max_z - self.space_min_z)
         return x_norm, y_norm, z_norm
 
-    def update_input(self, object_instance):
+    def process_input_device_values(self, object_instance):
         for person, attrs in object_instance.people.items():
             if "head" in attrs:
                 x = attrs["head"]["x"]
                 y = attrs["head"]["y"]
                 z = attrs["head"]["z"]
-                print(x, y, z)
                 if self.self_calibrate:
                     self.calibrate_min_max(x, y, z)
                 x, y, z = self.normalize_3d_point(x, y, z)
                 fuzzy_spatial_map = self.get_fuzzy_output(x, y, z)
                 self.set_spatial_map_values(fuzzy_spatial_map)
-        self.send_update()
 
     def fuzzy_log(self, x):
         # assume 0-1
@@ -172,7 +172,9 @@ class SpatialLightController(Controller):
                 self.output_devices[d].set_value("g", g)
                 self.output_devices[d].set_value("b", b)
 
-    def send_update(self):
+    def set_output_device_values(self):
+        # end = time.time()
+        # print(end - start)
         for d in self.output_devices.keys():
             r = self.output_devices[d].get_value("r")
             g = self.output_devices[d].get_value("g")

@@ -55,9 +55,10 @@ void setup()
   // lumi via OSC depending on the time lumi is taking...
   // limit frame rate to compensate for lumi computation
   // the kinect v1 captures at 30 FPS
-  frameRate(20);
+  frameRate(30);
   // start a new kinect object
   kinect = new SimpleOpenNI(this);
+  kinect.setMirror(true);
 
   // enable depth sensor
   kinect.enableDepth();
@@ -119,10 +120,8 @@ void draw(){
   // update the camera
   kinect.update();
     
-  OscMessage messageOut = new OscMessage("/kinect");
   userIDs = kinect.getUsers();
   // loop through each user to see if tracking
-  OscBundle updateBundle = new OscBundle();
   for(int i=0;i<userIDs.length;i++) {
     // if Kinect is tracking certain user then get joint vectors
     if(kinect.isTrackingSkeleton(userIDs[i])) {
@@ -140,24 +139,22 @@ void draw(){
 
           // convert real world coord to projective space
           kinect.convertRealWorldToProjective(currentPositionVector, currentPositionVector);
-          currentPositionVector.lerp(lastPositionVector, 0.3f);
+          currentPositionVector.lerp(lastPositionVector, 0.5f);
           distanceScalar = (225/currentPositionVector.z);
           ellipse(currentPositionVector.x, currentPositionVector.y, distanceScalar*jointMarkerSize, distanceScalar*jointMarkerSize);
           lastPositionVector = currentPositionVector;
           // add each position to an OSC bundle
-          messageOut.setAddrPattern("/kinect");
+          OscMessage messageOut = new OscMessage("/kinect");
           messageOut.add(userID);
           messageOut.add(positionLabel);
           messageOut.add(currentPositionVector.x);
           messageOut.add(currentPositionVector.y);
           messageOut.add(currentPositionVector.z);
-          updateBundle.add(messageOut);
-          messageOut.clear();
+          oscP5.send(messageOut, oscSendServer);
         }
       } //if(confidence > confidenceLevel)
     } //if(kinect.isTrackingSkeleton(userID[i]))
   } //for(int i=0;i<userID.length;i++)
-  oscP5.send(updateBundle, oscSendServer);
 } // void draw()
 
 void onNewUser(SimpleOpenNI curContext, int userId){

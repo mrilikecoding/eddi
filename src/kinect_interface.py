@@ -1,18 +1,33 @@
 class KinectInterface:
     """
     Input via OSC - specify the address prefix of messages from this device
+    This class keeps track of kinect position state for up to 6 people (according to kinect v1 spec)
+    Written assuming joint position coordinates (x, y, z) are send via osc messages
     """
 
-    def __init__(self, update_callback=lambda x: None):
+    def __init__(self):
         self.name = "kinect"
         self.osc_addr_prefix = "/kinect"
         self.people = {}  # track individual people
-        self.update_callback = update_callback
+        # what skeleton positions / joints are we interested in?
+        self.position_list = [
+            "head",
+            "neck",
+            "leftShoulder",
+            "leftElbow",
+            "leftHand",
+            "rightShoulder",
+            "rightElbow",
+            "rightHand",
+            "torso",
+            "leftHip",
+            "rightHip",
+            "leftKnee",
+            "leftFoot",
+            "rightFoot",
+        ]
 
-    def set_update_callback(self, cb):
-        self.update_callback = cb
-
-    def osc_update(self, unused_addr, *obj):
+    def update_from_osc(self, unused_addr, *obj):
         """
         Must conform to message handler signature
         unused_addr, *args
@@ -21,15 +36,13 @@ class KinectInterface:
         """
         try:
             user_id, position, x, y, z = obj
+            if position not in self.position_list:
+                return
             if user_id not in self.people:
                 self.people[user_id] = {}
             person = self.people[user_id]
-            if id not in self.people:
-                self.people[id] = {}
 
-            # update head
+            # update position coordinates
             person[position] = {"x": x, "y": y, "z": z}
         except Exception as e:
             print("Unable to parse OSC message for Kinect", e)
-
-        self.update_callback(self)
