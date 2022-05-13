@@ -6,6 +6,8 @@ class KinectInterface:
     """
 
     def __init__(self):
+        # TODO make an interface here since this is also going to be
+        # used to parse the skel data for MHIs
         self.name = "kinect"
         self.osc_addr_prefix = "/kinect"
         self.people = {}  # track individual people
@@ -23,6 +25,7 @@ class KinectInterface:
             "leftHip",
             "rightHip",
             "leftKnee",
+            "rightKnee",
             "leftFoot",
             "rightFoot",
         ]
