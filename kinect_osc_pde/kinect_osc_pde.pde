@@ -58,7 +58,7 @@ void setup()
   frameRate(30);
   // start a new kinect object
   kinect = new SimpleOpenNI(this);
-  kinect.setMirror(true);
+  // kinect.setMirror(true);
 
   // enable depth sensor
   kinect.enableDepth();

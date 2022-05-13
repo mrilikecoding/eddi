@@ -98,7 +98,15 @@ class Lumi:
         for _, device in self.input_registry.items():
             # TODO this is the entrypoint for any logic - does this make sense?
             self.light_controller.process_input_device_values(device)
-        self.light_controller.set_output_device_values()
+            # TODO figure out how this
+
+        for _, device in self.output_registry.items():
+            r = device.get_value("r")
+            g = device.get_value("g")
+            b = device.get_value("b")
+            self.send_channel_message(device.name, "r", r)
+            self.send_channel_message(device.name, "g", g)
+            self.send_channel_message(device.name, "b", b)
 
     def update(self):
         self.update_output_devices()
