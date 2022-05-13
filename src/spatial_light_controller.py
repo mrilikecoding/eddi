@@ -9,6 +9,9 @@ class SpatialLightController(Controller):
         # define the default min/max x,y,z input values
         # these will be used to determine degree of membership
         # for fuzzy logic
+        # TODO if the space is partitioned differently or hierarchically,
+        # these will need to be set in config - prob makes sense to do that
+        # there anyway - can be overridden by "self callibrate" flag
         self.space_max_x = 500.0
         self.space_min_x = 100.0
         self.space_max_y = 378.0
@@ -29,6 +32,7 @@ class SpatialLightController(Controller):
         # to a dictionary keyed off attribute
         self.attr_indexed_output_devices = {}
         # TODO can probably abstract this from config file
+        # making this more abstract will enable different kinds of space partitioning
         self.spatial_categories = [
             "left",
             "right",
@@ -38,6 +42,8 @@ class SpatialLightController(Controller):
             "front",
             "middle",
         ]
+        # TODO there can be a multi-space hierarchy that defines
+        # categories for each space and their primary axes
         self.primary_axis = ["left", "right"]
         try:
             f = open("spatial_device_configuration.json")
@@ -171,14 +177,3 @@ class SpatialLightController(Controller):
                 self.output_devices[d].set_value("r", r)
                 self.output_devices[d].set_value("g", g)
                 self.output_devices[d].set_value("b", b)
-
-    def set_output_device_values(self):
-        # end = time.time()
-        # print(end - start)
-        for d in self.output_devices.keys():
-            r = self.output_devices[d].get_value("r")
-            g = self.output_devices[d].get_value("g")
-            b = self.output_devices[d].get_value("b")
-            self.send_channel_message(d, "r", r)
-            self.send_channel_message(d, "g", g)
-            self.send_channel_message(d, "b", b)
