@@ -1,4 +1,5 @@
 import asyncio
+import time
 from pythonosc import udp_client
 from pythonosc import dispatcher
 from pythonosc import osc_server
@@ -12,6 +13,7 @@ class Lumi:
         self, send_server="127.0.0.1", send_port=7700, osc_message_prefix="/dmxout/"
     ):
         self.client = udp_client.SimpleUDPClient(send_server, send_port)
+        self.FPS = 30  # how many updates / frames per sec?
         self.osc_message_prefix = osc_message_prefix
         self.output_registry = {}
         self.input_registry = {}
@@ -27,15 +29,11 @@ class Lumi:
     def generic_handler(self, unused_addr, *args):
         print(unused_addr, args)
 
-    def input_update_handler(self, input_device_instance):
-        self.light_controller.update_input(input_device_instance)
-
     def register_input_device(self, device_instance):
         self.input_registry[device_instance.name] = device_instance
         self.input_dispatcher.map(
-            device_instance.osc_addr_prefix, device_instance.osc_update
+            device_instance.osc_addr_prefix, device_instance.update_from_osc
         )
-        device_instance.set_update_callback(self.input_update_handler)
 
     def blackout(self):
         for device_name in self.output_registry.keys():
@@ -52,7 +50,6 @@ class Lumi:
                     device.osc_addr_prefix + "/" + device.name + channel_name, value
                 )
                 self.output_registry[device.name].set_value(channel_name, value)
-                # print(f"Sent {device.name + channel_name} val {value}.")
         except Exception as e:
             print(f"Couldn't send message to {device.name}...")
             print(e)
@@ -67,6 +64,7 @@ class Lumi:
                 device.osc_addr_prefix + "/" + device.name + channel_name, value
             )
             self.output_registry[device.name].set_value(channel_name, value)
+
             # print(f"Sent {device.name + channel_name} val {value}.")
         except Exception as e:
             print(f"Couldn't send message to {device.name}...")
@@ -80,7 +78,7 @@ class Lumi:
         while True:
             # TODO find something useful put here, like keys for quitting
             self.update()  # if we want to do other stuff...
-            await asyncio.sleep(1 / 60)  # FPS
+            await asyncio.sleep(1 / self.FPS)  # FPS
 
     async def init_main(self, port, ip):
         dispatcher = self.input_dispatcher
@@ -96,5 +94,11 @@ class Lumi:
         self.blackout()  # let's turn off the lights on the way out
         transport.close()  # Clean up serve endpoint
 
+    def update_output_devices(self):
+        for _, device in self.input_registry.items():
+            # TODO this is the entrypoint for any logic - does this make sense?
+            self.light_controller.process_input_device_values(device)
+        self.light_controller.set_output_device_values()
+
     def update(self):
-        pass
+        self.update_output_devices()
