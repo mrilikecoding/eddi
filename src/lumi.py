@@ -18,10 +18,7 @@ class Lumi:
         self.output_registry = {}
         self.input_registry = {}
         self.input_dispatcher = dispatcher.Dispatcher()
-        self.light_controller = SpatialLightController(
-            send_channel_message=self.send_channel_message,
-            send_message=self.send_message,
-        )
+        self.light_controller = SpatialLightController()
 
     def register_output_device(self, device):
         self.output_registry[device.name] = device
@@ -96,14 +93,13 @@ class Lumi:
 
     def update_output_devices(self):
         for _, device in self.input_registry.items():
-            # TODO this is the entrypoint for any logic - does this make sense?
             self.light_controller.process_input_device_values(device)
-            # TODO figure out how this
 
         for _, device in self.output_registry.items():
             r = device.get_value("r")
             g = device.get_value("g")
             b = device.get_value("b")
+            # TODO figure out other channels
             self.send_channel_message(device.name, "r", r)
             self.send_channel_message(device.name, "g", g)
             self.send_channel_message(device.name, "b", b)
