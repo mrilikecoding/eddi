@@ -8,18 +8,11 @@ class FuzzyJointTracker(PipelineNode):
     ):
         self.space_joint_to_track = "head"
         # for normalizing fuzzy values against min / max dimensions
-        self.space_min_x = min_max_dimensions["min_x"]
-        self.space_min_y = min_max_dimensions["min_y"]
-        self.space_min_z = min_max_dimensions["min_z"]
-        self.space_max_x = min_max_dimensions["max_x"]
-        self.space_max_y = min_max_dimensions["max_y"]
-        self.space_max_z = min_max_dimensions["max_z"]
-
         # set the max bounds based on incoming data
         self.self_calibrate = False
 
-        # from config file, map generic spatial assignments for each instrument
-        # to a dictionary keyed off attribute
+        # init pipeline parent
+        super().__init__(min_max_dimensions)
 
     def fuzzy_log(self, x):
         # assume 0-1

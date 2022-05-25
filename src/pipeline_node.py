@@ -2,35 +2,35 @@ import json
 
 
 class PipelineNode:
-    def __init__(self):
-        self.space_min_x = 0
-        self.space_min_y = 0
-        self.space_min_z = 0
-        self.space_max_x = 0
-        self.space_max_y = 0
-        self.space_max_z = 0
-
-        spatial_categories = (
-            [
-                "left",
-                "right",
-                "top",
-                "bottom",
-                "back",
-                "front",
-                "middle",
-            ],
-        )
-        primary_axis = ["left", "right"]
+    def __init__(self, min_max_dimensions):
+        self.space_min_x = min_max_dimensions["min_x"]
+        self.space_min_y = min_max_dimensions["min_y"]
+        self.space_min_z = min_max_dimensions["min_z"]
+        self.space_max_x = min_max_dimensions["max_x"]
+        self.space_max_y = min_max_dimensions["max_y"]
+        self.space_max_z = min_max_dimensions["max_z"]
 
         # assume we have some discrete spatial areas and at least one binary primary axis
         # TODO can probably abstract this from config file
         # making this more abstract will enable different kinds of space partitioning
-        self.spatial_categories = spatial_categories
+        spatial_categories = [
+            "left",
+            "right",
+            "top",
+            "bottom",
+            "back",
+            "front",
+            "middle",
+        ]
+        primary_axis = ["left", "right"]
+
         # TODO there can be a multi-space hierarchy that defines
         # categories for each space and their primary axes
+        self.spatial_categories = spatial_categories
         self.primary_axis = primary_axis
 
+        # from config file, map generic spatial assignments for each instrument
+        # to a dictionary keyed off attribute
         self.attr_indexed_output_devices = {}
         try:
             f = open("spatial_device_configuration.json")
