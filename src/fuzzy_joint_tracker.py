@@ -44,9 +44,9 @@ class FuzzyJointTracker(PipelineNode):
         }
         return output
 
-    def process_input_device_values(self, object_instance):
+    def process_input_device_values(self, input_object_instance):
         joint = self.space_joint_to_track
-        for person, attrs in object_instance.people.items():
+        for person, attrs in input_object_instance.people.items():
             if joint in attrs:
                 x = attrs[joint]["x"]
                 y = attrs[joint]["y"]

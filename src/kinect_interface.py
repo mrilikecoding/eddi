@@ -12,7 +12,7 @@ class KinectInterface:
         self.osc_addr_prefix = "/kinect"
         self.people = {}  # track individual people
         # what skeleton positions / joints are we interested in?
-        self.position_list = [
+        self.joint_list = [
             "head",
             "neck",
             "leftShoulder",
@@ -38,14 +38,14 @@ class KinectInterface:
         This parses message received via osc and stores head x y z in a user key
         """
         try:
-            user_id, position, x, y, z = obj
-            if position not in self.position_list:
+            user_id, joint, x, y, z = obj
+            if joint not in self.joint_list:
                 return
             if user_id not in self.people:
                 self.people[user_id] = {}
             person = self.people[user_id]
 
             # update position coordinates
-            person[position] = {"x": x, "y": y, "z": z}
+            person[joint] = {"x": x, "y": y, "z": z}
         except Exception as e:
             print("Unable to parse OSC message for Kinect", e)
