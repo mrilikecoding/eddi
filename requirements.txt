@@ -1,24 +1,15 @@
 appnope==0.1.3
-asttokens==2.0.5
-autopep8 @ file:///tmp/build/80754af9/autopep8_1620866417880/work
-backcall==0.2.0
+asttokens @ file:///opt/conda/conda-bld/asttokens_1646925590279/work
+backcall @ file:///home/ktietz/src/ci/backcall_1611930011877/work
 black==22.3.0
-brotlipy==0.7.0
 certifi==2021.10.8
-cffi @ file:///opt/concourse/worker/volumes/live/8fbed55e-0573-4246-7cf9-162067141d5e/volume/cffi_1605538070636/work
-chardet @ file:///opt/concourse/worker/volumes/live/a5a7c56b-23cb-471d-7404-f4130b8aed33/volume/chardet_1605303184529/work
 click==8.1.2
-conda==4.10.3
-conda-package-handling @ file:///opt/concourse/worker/volumes/live/a7e34989-4c54-4cb6-4156-4e58ee270730/volume/conda-package-handling_1603018121300/work
-cryptography @ file:///opt/concourse/worker/volumes/live/62f9527a-361c-47e5-5709-227a4a523add/volume/cryptography_1605544472602/work
 cycler==0.11.0
-decorator==5.1.1
-executing==0.8.3
+decorator @ file:///opt/conda/conda-bld/decorator_1643638310831/work
+executing @ file:///opt/conda/conda-bld/executing_1646925071911/work
 fonttools==4.31.2
-idna @ file:///tmp/build/80754af9/idna_1593446292537/work
-imutils==0.5.4
 ipython==8.2.0
-jedi==0.18.1
+jedi @ file:///opt/concourse/worker/volumes/live/fb2e45f1-1dff-42fa-6cab-bd094a4c4372/volume/jedi_1644315264796/work
 kiwisolver==1.4.2
 matplotlib==3.5.1
 matplotlib-inline==0.1.3
@@ -27,33 +18,26 @@ numpy==1.22.3
 ola==0.10.7
 opencv-contrib-python==4.5.5.64
 packaging==21.3
-parso==0.8.3
+parso @ file:///opt/conda/conda-bld/parso_1641458642106/work
 pathspec==0.9.0
-pexpect==4.8.0
-pickleshare==0.7.5
+pexpect @ file:///tmp/build/80754af9/pexpect_1605563209008/work
+pickleshare @ file:///tmp/build/80754af9/pickleshare_1606932040724/work
 Pillow==9.0.1
 platformdirs==2.5.1
 prompt-toolkit==3.0.29
 protobuf==3.20.0
-ptyprocess==0.7.0
-pure-eval==0.2.2
-pycodestyle @ file:///tmp/build/80754af9/pycodestyle_1615748559966/work
-pycosat==0.6.3
-pycparser @ file:///tmp/build/80754af9/pycparser_1594388511720/work
-Pygments==2.11.2
-pyOpenSSL @ file:///tmp/build/80754af9/pyopenssl_1605545627475/work
+ptyprocess @ file:///tmp/build/80754af9/ptyprocess_1609355006118/work/dist/ptyprocess-0.7.0-py2.py3-none-any.whl
+pure-eval @ file:///opt/conda/conda-bld/pure_eval_1646925070566/work
+Pygments @ file:///opt/conda/conda-bld/pygments_1644249106324/work
+PyOpenGL==3.1.6
+PyOpenGL-accelerate==3.1.5
 pyparsing==3.0.7
-PySocks @ file:///opt/concourse/worker/volumes/live/85a5b906-0e08-41d9-6f59-084cee4e9492/volume/pysocks_1594394636991/work
 python-dateutil==2.8.2
 python-osc==1.8.0
-requests @ file:///tmp/build/80754af9/requests_1592841827918/work
-ruamel-yaml==0.15.87
-six==1.16.0
-stack-data==0.2.0
-toml @ file:///tmp/build/80754af9/toml_1616166611790/work
+six @ file:///tmp/build/80754af9/six_1644875935023/work
+stack-data @ file:///opt/conda/conda-bld/stack_data_1646927590127/work
 tomli==2.0.1
 tqdm==4.63.1
-traitlets==5.1.1
-typing-extensions==4.1.1
-urllib3 @ file:///tmp/build/80754af9/urllib3_1603305693037/work
-wcwidth==0.2.5
+traitlets @ file:///tmp/build/80754af9/traitlets_1636710298902/work
+typing_extensions==4.1.1
+wcwidth @ file:///Users/ktietz/demo/mc3/conda-bld/wcwidth_1629357192024/work
