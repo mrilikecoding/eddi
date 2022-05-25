@@ -54,7 +54,27 @@ class PipelineNode:
                     if v == True:
                         self.attr_indexed_output_devices[k] = [device]
 
-    def process_input_device_values(self):
+    def process_input_device_values(self, input_device_instance=None):
+        """
+        Make sure to implement this function in any subclass
+
+        If this pipeline node should update output device values,
+        then this method should call self.set_spatial_map_values with
+        a dictionary keyed off each spatial category and values
+        between 0 and 1
+
+        Example:
+            spatial_map_values = {
+                "back": 0.1,
+                "front": 1.0,
+                "bottom": 1.0,
+                "top": 0.4,
+                "right": 1.0,
+                "left": 0.1,
+                "middle": 0.0,
+            }
+            self.set_spatial_map_values(spatial_map_values)
+        """
         raise NotImplementedError
 
     def set_space_boundaries(self, min_max_dimensions):
