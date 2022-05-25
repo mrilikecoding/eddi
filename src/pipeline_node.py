@@ -151,3 +151,11 @@ class PipelineNode:
         y_norm = (y - self.space_min_y) / (self.space_max_y - self.space_min_y)
         z_norm = (z - self.space_min_z) / (self.space_max_z - self.space_min_z)
         return x_norm, y_norm, z_norm
+
+    def normalize_point(self, x, min_x, max_x, min_target, max_target):
+        if x > max_x:
+            x = max_x
+        if x < min_x:
+            x = min_x
+        x_norm = ((x - min_x) / (max_x - min_x)) * (max_target - min_target)
+        return x_norm
