@@ -162,8 +162,6 @@ class PipelineNode:
                 x = max_x
             if x < min_x:
                 x = min_x
-        elif (x > max_x) or (x < min_x):
-            return -1
 
         x_norm = ((x - min_x) / (max_x - min_x)) * (max_target - min_target)
         return x_norm
