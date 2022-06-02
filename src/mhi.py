@@ -23,7 +23,8 @@ class MotionHistoryImager(PipelineNode):
         self.canvas_center = (self.w / 2, self.h / 2)
         self.center_joint = "torso"  # name of joint to center MHI on
 
-        self.init_canvas = np.zeros((self.h, self.w, 3), dtype=np.uint8)
+        # self.init_canvas = np.zeros((self.h, self.w, 3), dtype=np.uint8)
+        self.init_canvas = np.zeros((self.h, self.w), dtype=np.uint8)
         self.MHI_canvases = {}  # will store a canvas for each person
 
         # joint position tracking
@@ -39,17 +40,19 @@ class MotionHistoryImager(PipelineNode):
             "rightElbow": ["rightHand"],
             "rightHand": [],
             "torso": ["leftHip", "rightHip"],
-            "leftHip": ["leftKnee", "rightHip"],
-            "rightHip": ["rightKnee"],
-            "leftKnee": ["leftFoot"],
-            "rightKnee": ["rightFoot"],
-            "leftFoot": [],
-            "rightFoot": [],
+            "leftHip": ["rightHip"],
+            # "leftHip": ["leftKnee", "rightHip"],
+            # "rightHip": ["rightKnee"],
+            # "leftKnee": ["leftFoot"],
+            # "rightKnee": ["rightFoot"],
+            # "leftFoot": [],
+            # "rightFoot": [],
         }
 
         # how fast will history decay per frame?
         # i.e. 0.9 = 90% of previous pixel value this frame
-        self.decay_rate = 0.85
+        self.tau = 255
+        self.decay = 3
         super().__init__(min_max_dimensions)
 
     def process_input_device_values(self, input_object_instance):
@@ -75,7 +78,8 @@ class MotionHistoryImager(PipelineNode):
 
             # update energy values with decay rate
             canvas = self.MHI_canvases[person]
-            canvas[:, :, :] = canvas[:, :, :] * self.decay_rate
+            canvas[canvas > 0] = canvas[canvas > 0] - self.decay
+            canvas[canvas < 0] = 0  # stay above 0
 
             joint_positions = self.joint_position_indices[person]
 
@@ -103,7 +107,7 @@ class MotionHistoryImager(PipelineNode):
                     )
                     z = int(
                         self.normalize_point(
-                            attrs[joint]["z"], self.min_z, self.max_z, 0, 179, True
+                            attrs[joint]["z"], self.min_z, self.max_z, 0, 255, True
                         )
                     )
 
@@ -121,11 +125,12 @@ class MotionHistoryImager(PipelineNode):
                         continue
 
                     joint_positions[joint] = (x_prime, y_prime)
-                    canvas[y_prime, x_prime] = [
-                        z,
-                        255,
-                        255,
-                    ]  # numpy array dim 0 is y dim 1 is x
+                    # canvas[y_prime, x_prime] = [
+                    #     z,
+                    #     255,
+                    #     255,
+                    # ]  # numpy array dim 0 is y dim 1 is x
+                    canvas[y_prime, x_prime] = 255
             self.connect_skel_joints(person)
 
     def connect_skel_joints(self, person):
@@ -137,14 +142,15 @@ class MotionHistoryImager(PipelineNode):
                     if connection in self.joint_position_indices[person]:
                         x2, y2 = self.joint_position_indices[person][connection]
                         rr, cc = line(x1, y1, x2, y2)
-                        z1 = canvas[y1, x1, 0]
-                        z2 = canvas[y2, x2, 0]
-                        depth_interpolated_values = np.linspace(
-                            z1, z2, num=len(rr)
-                        ).astype("uint8")
+                        # z1 = canvas[y1, x1, 0]
+                        # z2 = canvas[y2, x2, 0]
+                        # depth_interpolated_values = np.linspace(
+                        #     z1, z2, num=len(rr)
+                        # ).astype("uint8")
 
-                        canvas[cc, rr, 0] = depth_interpolated_values
-                        canvas[cc, rr, 1:] = 255
+                        # canvas[cc, rr, 0] = depth_interpolated_values
+                        # canvas[cc, rr, 1:] = 255
+                        canvas[cc, rr] = 255
 
     def display_canvases(self):
         try:
@@ -152,7 +158,6 @@ class MotionHistoryImager(PipelineNode):
             if self.MHI_canvases:
                 canvases = np.concatenate(list(self.MHI_canvases.values()), axis=1)
             canvases = cv2.resize(canvases, (self.w * 2, self.h * 2))
-            canvases = cv2.cvtColor(canvases, cv2.COLOR_BGR2HSV)
             canvases = cv2.medianBlur(canvases, 5)
             cv2.imshow("MHI Canvas", canvases)
             cv2.waitKey(1)
