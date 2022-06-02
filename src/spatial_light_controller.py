@@ -2,6 +2,7 @@ import time
 
 from src.controller import Controller
 from src.fuzzy_joint_tracker import FuzzyJointTracker
+from src.mhi import MotionHistoryImager
 
 
 class SpatialLightController(Controller):
@@ -27,11 +28,17 @@ class SpatialLightController(Controller):
 
         self.output_devices = output_devices
 
-        # Processing pipeline classes
+        # Init processing pipeline node instances
         self.fuzzy_tracker = FuzzyJointTracker(
             self.space_min_max_dimensions,
         )
-        self.processing_pipeline = [self.fuzzy_tracker]
+        self.motion_history_imager = MotionHistoryImager(
+            self.space_min_max_dimensions,
+        )
+        self.processing_pipeline = [
+            self.fuzzy_tracker,
+            self.motion_history_imager,
+        ]
 
     def set_output_devices(self, output_devices):
         """
