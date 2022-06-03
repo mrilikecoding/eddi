@@ -1,7 +1,11 @@
 import cv2
 import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
 from skimage.draw import line
 
+from collections import deque
 from src.pipeline_node import PipelineNode
 
 
@@ -26,6 +30,7 @@ class MotionHistoryImager(PipelineNode):
         # self.init_canvas = np.zeros((self.h, self.w, 3), dtype=np.uint8)
         self.init_canvas = np.zeros((self.h, self.w), dtype=np.uint8)
         self.MHI_canvases = {}  # will store a canvas for each person
+        self.MHI_volumes = {}  # will store a VMHI for each person
 
         # joint position tracking
         self.joint_position_indices = {}
@@ -49,10 +54,11 @@ class MotionHistoryImager(PipelineNode):
             # "rightFoot": [],
         }
 
-        # how fast will history decay per frame?
         # i.e. 0.9 = 90% of previous pixel value this frame
-        self.tau = 255
-        self.decay = 3
+        # how many frames are in this volume
+        self.tau = 60
+        # how fast will energy decay per frame?
+        self.decay = 1
         super().__init__(min_max_dimensions)
 
     def process_input_device_values(self, input_object_instance):
@@ -61,7 +67,8 @@ class MotionHistoryImager(PipelineNode):
                 self.input_joint_list = input_object_instance.joint_list
 
             self.draw_skeleton(input_object_instance)
-            self.display_canvases()
+            # self.display_canvases()
+            self.display_VMHI()
 
         except Exception as e:
             print(f"Problem parsing input device data: {e}")
@@ -73,6 +80,8 @@ class MotionHistoryImager(PipelineNode):
             # instantiate a canvas and joint lookup map for each person
             if person not in self.MHI_canvases:
                 self.MHI_canvases[person] = np.copy(self.init_canvas)
+            if person not in self.MHI_volumes:
+                self.MHI_volumes[person] = deque(maxlen=self.tau)
             if person not in self.joint_position_indices:
                 self.joint_position_indices[person] = {}
 
@@ -132,6 +141,7 @@ class MotionHistoryImager(PipelineNode):
                     # ]  # numpy array dim 0 is y dim 1 is x
                     canvas[y_prime, x_prime] = 255
             self.connect_skel_joints(person)
+            self.update_VMHI(person)
 
     def connect_skel_joints(self, person):
         canvas = self.MHI_canvases[person]
@@ -152,6 +162,13 @@ class MotionHistoryImager(PipelineNode):
                         # canvas[cc, rr, 1:] = 255
                         canvas[cc, rr] = 255
 
+    def update_VMHI(self, person):
+        # we only want the values of the most recent position
+        # so threshold the canvas to zero values other than 255
+        canvas = np.copy(self.MHI_canvases[person])
+        canvas[canvas < 255] = 0
+        self.MHI_volumes[person].append(canvas)
+
     def display_canvases(self):
         try:
             canvases = self.init_canvas
@@ -161,5 +178,16 @@ class MotionHistoryImager(PipelineNode):
             canvases = cv2.medianBlur(canvases, 5)
             cv2.imshow("MHI Canvas", canvases)
             cv2.waitKey(1)
+        except Exception as e:
+            print(f"Problem rendering MHI data: {e}")
+
+    def display_VMHI(self):
+        try:
+            for volume in self.MHI_volumes.values():
+                VMHI = np.array(volume)
+                stacked = VMHI.sum(axis=0)
+                cv2.imshow("VMHI Stacked", stacked)
+                cv2.waitKey(1)
+
         except Exception as e:
             print(f"Problem rendering MHI data: {e}")
