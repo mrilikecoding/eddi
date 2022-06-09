@@ -24,10 +24,10 @@ class KinectInterface:
             "torso",
             "leftHip",
             "rightHip",
-            "leftKnee",
-            "rightKnee",
-            "leftFoot",
-            "rightFoot",
+            # "leftKnee",
+            # "rightKnee",
+            # "leftFoot",
+            # "rightFoot",
         ]
 
     def update_from_osc(self, unused_addr, *obj):
