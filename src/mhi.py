@@ -1,7 +1,5 @@
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 
 from skimage.draw import line
 
@@ -58,7 +56,7 @@ class MotionHistoryImager(PipelineNode):
         # how many frames are in this volume
         self.tau = 60
         # how fast will energy decay per frame?
-        self.decay = 1
+        self.decay = 3
         super().__init__(min_max_dimensions)
 
     def process_input_device_values(self, input_object_instance):
@@ -66,14 +64,46 @@ class MotionHistoryImager(PipelineNode):
             if not self.input_joint_list:
                 self.input_joint_list = input_object_instance.joint_list
 
-            self.draw_skeleton(input_object_instance)
-            # self.display_canvases()
-            self.display_VMHI()
+            self.process_skeleton_input(input_object_instance)
+            self.display_canvases()
+            # self.display_VMHI()
 
         except Exception as e:
             print(f"Problem parsing input device data: {e}")
 
-    def draw_skeleton(self, input_object_instance):
+    def process_skeleton_input(self, input_object_instance):
+        if not input_object_instance.people.items():
+            return
+        for person in input_object_instance.people.keys():
+            if person in self.MHI_canvases:
+                self.decay_canvas(person)
+        self.draw_skeleton_joints(input_object_instance)
+        self.fill_skeleton(input_object_instance)
+
+    def decay_canvas(self, person):
+        # update energy values with decay rate
+        canvas = self.MHI_canvases[person]
+        canvas[canvas > 0] = canvas[canvas > 0] - self.decay
+        canvas[canvas < 0] = 0  # stay above 0
+
+    def fill_skeleton(self, person):
+        if not person in self.MHI_canvases:
+            return
+        canvas = self.MHI_canvases[person]
+        tri1 = "head", "leftShoulder", "neck", "rightShoulder"
+        tri2 = "leftShoulder", "leftElbow", "leftHand"
+        tri3 = "rightShoulder", "rightElbow", "rightHand"
+        tri4 = "torso", "leftShoulder", "rightShoulder"
+        tri5 = "torso", "leftHip", "rightHip"
+        for joint_list in [tri1, tri2, tri3, tri4, tri5]:
+            joint_inputs = self.joint_position_indices[person]
+            joints = [
+                joint_inputs[joint] for joint in joint_list if joint in joint_inputs
+            ]
+            joint_positions = np.array(list(joints))
+            cv2.fillConvexPoly(canvas, joint_positions, 255)
+
+    def draw_skeleton_joints(self, input_object_instance):
         if not input_object_instance.people.items():
             return
         for person, attrs in input_object_instance.people.items():
@@ -85,11 +115,7 @@ class MotionHistoryImager(PipelineNode):
             if person not in self.joint_position_indices:
                 self.joint_position_indices[person] = {}
 
-            # update energy values with decay rate
             canvas = self.MHI_canvases[person]
-            canvas[canvas > 0] = canvas[canvas > 0] - self.decay
-            canvas[canvas < 0] = 0  # stay above 0
-
             joint_positions = self.joint_position_indices[person]
 
             # create offset for centering skel on canvas (torso is good choice)
@@ -140,7 +166,8 @@ class MotionHistoryImager(PipelineNode):
                     #     255,
                     # ]  # numpy array dim 0 is y dim 1 is x
                     canvas[y_prime, x_prime] = 255
-            self.connect_skel_joints(person)
+            # self.connect_skel_joints(person)
+            self.fill_skeleton(person)
             self.update_VMHI(person)
 
     def connect_skel_joints(self, person):
@@ -182,12 +209,43 @@ class MotionHistoryImager(PipelineNode):
             print(f"Problem rendering MHI data: {e}")
 
     def display_VMHI(self):
-        try:
-            for volume in self.MHI_volumes.values():
-                VMHI = np.array(volume)
-                stacked = VMHI.sum(axis=0)
-                cv2.imshow("VMHI Stacked", stacked)
-                cv2.waitKey(1)
+        for volume in self.MHI_volumes.values():
+            vmhi = np.array(volume)
+        # try:
 
-        except Exception as e:
-            print(f"Problem rendering MHI data: {e}")
+        # # generate some neat n times 3 matrix using a variant of sync function
+        # x = np.linspace(-3, 3, 401)
+        # mesh_x, mesh_y = np.meshgrid(x, x)
+        # z = np.sinc((np.power(mesh_x, 2) + np.power(mesh_y, 2)))
+        # z_norm = (z - z.min()) / (z.max() - z.min())
+        # xyz = np.zeros((np.size(mesh_x), 3))
+        # xyz[:, 0] = np.reshape(mesh_x, -1)
+        # xyz[:, 1] = np.reshape(mesh_y, -1)
+        # xyz[:, 2] = np.reshape(z_norm, -1)
+
+        # # Pass xyz to Open3D.o3d.geometry.PointCloud and visualize
+        # pcd = o3d.geometry.PointCloud()
+        # pcd.points = o3d.utility.Vector3dVector(xyz)
+        # o3d.io.write_point_cloud("sync.ply", pcd)
+
+        # # Load saved point cloud and visualize it
+        # pcd_load = o3d.io.read_point_cloud("sync.ply")
+        # self.vis.update_geometry(pcd_load)
+        # self.vis.poll_events()
+        # self.vis.update_renderer()
+
+        # pcd = o3d.geometry.PointCloud()
+        # pcd.points = o3d.utility.Vector3dVector(volume)
+        # o3d.io.write_point_cloud("volume.ply", volume)
+
+        # # Load saved point cloud and visualize it
+        # pcd_load = o3d.io.read_point_cloud("c.ply")
+        # o3d.visualization.draw_geometries([pcd_load])
+
+        # VMHI = np.array(volume)
+        # stacked = VMHI.sum(axis=0)
+        # cv2.imshow("VMHI Stacked", stacked)
+        # cv2.waitKey(1)
+
+        # except Exception as e:
+        #     print(f"Problem rendering MHI data: {e}")
