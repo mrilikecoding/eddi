@@ -1,11 +1,19 @@
 import cv2
 import numpy as np
+
 from skimage.draw import line
 
+from collections import deque
 from src.pipeline_node import PipelineNode
+from src.image_moments import ImageMoments
 
 
 class MotionHistoryImager(PipelineNode):
+    """
+    This class take input device state representing people joint coordinates
+    and produces a volume of Motion History Images, Motion Engergy Images and
+    a volume of Hu Moments
+    """
     def __init__(self, min_max_dimensions):
         self.input_joint_list = []
         # for normalizing constants
@@ -25,11 +33,25 @@ class MotionHistoryImager(PipelineNode):
 
         # self.init_canvas = np.zeros((self.h, self.w, 3), dtype=np.uint8)
         self.init_canvas = np.zeros((self.h, self.w), dtype=np.uint8)
-        self.MHI_canvases = {}  # will store a canvas for each person
+        # Motion History Images (Time Decayed)
+        self.MHI_canvases = {}  # will store a MHI canvas for each person
+        # Motion Energy Images
+        self.MEI_canvases = {}  # will store a MEI canvas for each person
+        self.Hu_moments = {}
+        # Store volume of canvases
+        self.MHI_volumes = {}  # will store a VMHI for each person
+        self.MEI_volumes = {}  # will store a VMEI for each person
+        self.Hu_volumes = {}
+        # How many frames in a volume
+        self.tau = 60
+        # How fast will energy decay per frame (MHI)?
+        # i.e. 0.9 = 90% of previous pixel value this frame
+        self.decay = 3
 
         # joint position tracking
         self.joint_position_indices = {}
-        # Should be a DAG
+        # For drawing skel - should be a DAG
+        # NB: not focusing below hips for now
         self.joint_connections = {
             "head": ["neck"],
             "neck": ["leftShoulder", "rightShoulder", "torso"],
@@ -49,38 +71,82 @@ class MotionHistoryImager(PipelineNode):
             # "rightFoot": [],
         }
 
-        # how fast will history decay per frame?
-        # i.e. 0.9 = 90% of previous pixel value this frame
-        self.tau = 255
-        self.decay = 3
         super().__init__(min_max_dimensions)
 
     def process_input_device_values(self, input_object_instance):
+        """
+        This is the primary entry point for this pipeline node
+        """
         try:
             if not self.input_joint_list:
                 self.input_joint_list = input_object_instance.joint_list
 
-            self.draw_skeleton(input_object_instance)
+            self.process_skeleton_input(input_object_instance)
             self.display_canvases()
 
         except Exception as e:
             print(f"Problem parsing input device data: {e}")
 
-    def draw_skeleton(self, input_object_instance):
+    def process_skeleton_input(self, input_object_instance):
+        if not input_object_instance.people.items():
+            return
+        for person in input_object_instance.people.keys():
+            if person in self.MHI_canvases:
+                self.decay_MHI_canvas(person)
+        self.draw_skeleton_joints(input_object_instance)
+        self.fill_skeleton(input_object_instance)
+
+    def decay_MHI_canvas(self, person):
+        # update energy values with decay rate
+        canvas = self.MHI_canvases[person]
+        canvas[canvas > 0] = canvas[canvas > 0] - self.decay
+        canvas[canvas < 0] = 0  # stay above 0
+
+    def fill_skeleton(self, person):
+        """
+        For a person tracked in the input object instance
+        Draw polyfilled skeleton for MEI and MHI canvases
+        """
+        if person not in self.MHI_canvases or person not in self.MEI_canvases:
+            return
+        MEI_canvas = self.MEI_canvases[person]
+        MHI_canvas = self.MHI_canvases[person]
+        tri1 = "head", "leftShoulder", "neck", "rightShoulder"
+        tri2 = "leftShoulder", "leftElbow", "leftHand"
+        tri3 = "rightShoulder", "rightElbow", "rightHand"
+        tri4 = "torso", "leftShoulder", "rightShoulder"
+        tri5 = "torso", "leftHip", "rightHip"
+        for joint_list in [tri1, tri2, tri3, tri4, tri5]:
+            joint_inputs = self.joint_position_indices[person]
+            joints = [
+                joint_inputs[joint] for joint in joint_list if joint in joint_inputs
+            ]
+            joint_positions = np.array(list(joints))
+            cv2.fillConvexPoly(MHI_canvas, joint_positions, 255)
+            cv2.fillConvexPoly(MEI_canvas, joint_positions, 255)
+
+    def draw_skeleton_joints(self, input_object_instance):
+        """
+        Add skel joints to
+        """
         if not input_object_instance.people.items():
             return
         for person, attrs in input_object_instance.people.items():
             # instantiate a canvas and joint lookup map for each person
             if person not in self.MHI_canvases:
                 self.MHI_canvases[person] = np.copy(self.init_canvas)
+            if person not in self.MEI_canvases:
+                self.MEI_canvases[person] = np.copy(self.init_canvas)
+            if person not in self.MHI_volumes:
+                self.MHI_volumes[person] = deque(maxlen=self.tau)
+            if person not in self.MEI_volumes:
+                self.MEI_volumes[person] = deque(maxlen=self.tau)
             if person not in self.joint_position_indices:
                 self.joint_position_indices[person] = {}
 
-            # update energy values with decay rate
-            canvas = self.MHI_canvases[person]
-            canvas[canvas > 0] = canvas[canvas > 0] - self.decay
-            canvas[canvas < 0] = 0  # stay above 0
-
+            self.MEI_canvases[person] = np.copy(self.init_canvas)
+            # Only need this if drawing the joints
+            # canvas = self.MHI_canvases[person]
             joint_positions = self.joint_position_indices[person]
 
             # create offset for centering skel on canvas (torso is good choice)
@@ -130,10 +196,19 @@ class MotionHistoryImager(PipelineNode):
                     #     255,
                     #     255,
                     # ]  # numpy array dim 0 is y dim 1 is x
-                    canvas[y_prime, x_prime] = 255
-            self.connect_skel_joints(person)
+                    # canvas[y_prime, x_prime] = 255
+            # self.connect_skel_joints(person)
+            self.fill_skeleton(person)
+            self.update_VMHI(person)
 
     def connect_skel_joints(self, person):
+        """
+        For each joint position, use the initialized joint_connections DAG
+        to draw a skeleton on the canvas
+
+        NOTE: this is only implemented currently for MHI canvas
+        Not using this currently in favor of the polyfilled skeleton
+        """
         canvas = self.MHI_canvases[person]
         for joint, connections in self.joint_connections.items():
             if joint in self.joint_position_indices[person]:
@@ -142,6 +217,10 @@ class MotionHistoryImager(PipelineNode):
                     if connection in self.joint_position_indices[person]:
                         x2, y2 = self.joint_position_indices[person][connection]
                         rr, cc = line(x1, y1, x2, y2)
+                        # This is from an attempt to depth interpolate the line color
+                        # for the z axis - however, because of the occlusion problem
+                        # with MHI, going a different route with the volume MHI
+                        # leaving for now
                         # z1 = canvas[y1, x1, 0]
                         # z2 = canvas[y2, x2, 0]
                         # depth_interpolated_values = np.linspace(
@@ -152,14 +231,26 @@ class MotionHistoryImager(PipelineNode):
                         # canvas[cc, rr, 1:] = 255
                         canvas[cc, rr] = 255
 
+    def update_VMHI(self, person):
+        # we only want the values of the most recent position
+        # so threshold the canvas to zero values other than 255
+        canvas = np.copy(self.MHI_canvases[person])
+        canvas[canvas < 255] = 0
+        self.MHI_volumes[person].append(canvas)
+
     def display_canvases(self):
         try:
-            canvases = self.init_canvas
-            if self.MHI_canvases:
-                canvases = np.concatenate(list(self.MHI_canvases.values()), axis=1)
-            canvases = cv2.resize(canvases, (self.w * 2, self.h * 2))
-            canvases = cv2.medianBlur(canvases, 5)
-            cv2.imshow("MHI Canvas", canvases)
+            MHI_canvases = np.copy(self.init_canvas)
+            MEI_canvases = np.copy(self.init_canvas)
+            if self.MHI_canvases and self.MEI_canvases:
+                MHI_canvases = np.concatenate(list(self.MHI_canvases.values()), axis=1)
+                MEI_canvases = np.concatenate(list(self.MEI_canvases.values()), axis=1)
+            MHI_canvases = cv2.resize(MHI_canvases, (self.w * 2, self.h * 2))
+            MEI_canvases = cv2.resize(MEI_canvases, (self.w * 2, self.h * 2))
+            MHI_canvases = cv2.medianBlur(MHI_canvases, 5)
+            MEI_canvases = cv2.medianBlur(MEI_canvases, 5)
+            canvases = np.concatenate([MHI_canvases, MEI_canvases], axis=0)
+            cv2.imshow("MHI/MEI Canvas", canvases)
             cv2.waitKey(1)
         except Exception as e:
             print(f"Problem rendering MHI data: {e}")
