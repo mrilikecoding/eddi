@@ -14,6 +14,7 @@ class MotionHistoryImager(PipelineNode):
     and produces a volume of Motion History Images, Motion Engergy Images and
     a volume of Hu Moments
     """
+
     def __init__(self, min_max_dimensions):
         self.input_joint_list = []
         # for normalizing constants
@@ -81,20 +82,14 @@ class MotionHistoryImager(PipelineNode):
             if not self.input_joint_list:
                 self.input_joint_list = input_object_instance.joint_list
 
-            self.process_skeleton_input(input_object_instance)
+            self.process_data_frame(input_object_instance)
             self.display_canvases()
 
         except Exception as e:
             print(f"Problem parsing input device data: {e}")
 
-    def process_skeleton_input(self, input_object_instance):
-        if not input_object_instance.people.items():
-            return
-        for person in input_object_instance.people.keys():
-            if person in self.MHI_canvases:
-                self.decay_MHI_canvas(person)
-        self.draw_skeleton_joints(input_object_instance)
-        self.fill_skeleton(input_object_instance)
+    def compute_moments(self, person):
+        pass
 
     def decay_MHI_canvas(self, person):
         # update energy values with decay rate
@@ -125,81 +120,89 @@ class MotionHistoryImager(PipelineNode):
             cv2.fillConvexPoly(MHI_canvas, joint_positions, 255)
             cv2.fillConvexPoly(MEI_canvas, joint_positions, 255)
 
-    def draw_skeleton_joints(self, input_object_instance):
+    def parse_skeleton_joints(self, person, attrs):
+        # init joint position lookup table if we don't have one
+        if person not in self.joint_position_indices:
+            self.joint_position_indices[person] = {}
+        joint_positions = self.joint_position_indices[person]
+
+        self.MEI_canvases[person] = np.copy(self.init_canvas)
+        # Only need this if drawing the joints
+        # canvas = self.MHI_canvases[person]
+
+        # create offset for centering skel on canvas (torso is good choice)
+        center_joint_x = self.normalize_point(
+            attrs[self.center_joint]["x"], self.min_x, self.max_x, 0, self.w
+        )
+        center_joint_y = self.normalize_point(
+            attrs[self.center_joint]["y"], self.min_y, self.max_y, 0, self.h
+        )
+        offset_x = int(center_joint_x - self.canvas_center[0])
+        offset_y = int(center_joint_y - self.canvas_center[1])
+
+        for joint in self.input_joint_list:
+            if joint in attrs:
+                x = int(
+                    self.normalize_point(
+                        attrs[joint]["x"], self.min_x, self.max_x, 0, self.w
+                    )
+                )
+                y = int(
+                    self.normalize_point(
+                        attrs[joint]["y"], self.min_y, self.max_y, 0, self.h
+                    )
+                )
+                z = int(
+                    self.normalize_point(
+                        attrs[joint]["z"], self.min_z, self.max_z, 0, 255, True
+                    )
+                )
+
+                x_prime = x - offset_x
+                y_prime = y - offset_y
+                # offsets may push some coords out of bounds
+                # if so, skip this joint
+                joint_out_of_bounds = (
+                    (x_prime >= self.w)
+                    or (x_prime <= 0)
+                    or (y_prime >= self.h)
+                    or (y_prime <= 0)
+                )
+                if joint_out_of_bounds:
+                    continue
+
+                joint_positions[joint] = (x_prime, y_prime)
+        # self.connect_skel_joints(person)
+
+    def process_data_frame(self, input_object_instance):
         """
-        Add skel joints to
+        This pipeline caller method parses the skel joints from the input object
+        Then it calls the function to render polygons agains the skel
+        Then
         """
         if not input_object_instance.people.items():
             return
         for person, attrs in input_object_instance.people.items():
-            # instantiate a canvas and joint lookup map for each person
-            if person not in self.MHI_canvases:
-                self.MHI_canvases[person] = np.copy(self.init_canvas)
-            if person not in self.MEI_canvases:
-                self.MEI_canvases[person] = np.copy(self.init_canvas)
-            if person not in self.MHI_volumes:
-                self.MHI_volumes[person] = deque(maxlen=self.tau)
-            if person not in self.MEI_volumes:
-                self.MEI_volumes[person] = deque(maxlen=self.tau)
-            if person not in self.joint_position_indices:
-                self.joint_position_indices[person] = {}
-
-            self.MEI_canvases[person] = np.copy(self.init_canvas)
-            # Only need this if drawing the joints
-            # canvas = self.MHI_canvases[person]
-            joint_positions = self.joint_position_indices[person]
-
-            # create offset for centering skel on canvas (torso is good choice)
-            center_joint_x = self.normalize_point(
-                attrs[self.center_joint]["x"], self.min_x, self.max_x, 0, self.w
-            )
-            center_joint_y = self.normalize_point(
-                attrs[self.center_joint]["y"], self.min_y, self.max_y, 0, self.h
-            )
-            offset_x = int(center_joint_x - self.canvas_center[0])
-            offset_y = int(center_joint_y - self.canvas_center[1])
-
-            for joint in self.input_joint_list:
-                if joint in attrs:
-                    x = int(
-                        self.normalize_point(
-                            attrs[joint]["x"], self.min_x, self.max_x, 0, self.w
-                        )
-                    )
-                    y = int(
-                        self.normalize_point(
-                            attrs[joint]["y"], self.min_y, self.max_y, 0, self.h
-                        )
-                    )
-                    z = int(
-                        self.normalize_point(
-                            attrs[joint]["z"], self.min_z, self.max_z, 0, 255, True
-                        )
-                    )
-
-                    # offsets may push some coords out of bounds
-                    # if so, skip this joint
-                    x_prime = x - offset_x
-                    y_prime = y - offset_y
-                    joint_out_of_bounds = (
-                        (x_prime >= self.w)
-                        or (x_prime <= 0)
-                        or (y_prime >= self.h)
-                        or (y_prime <= 0)
-                    )
-                    if joint_out_of_bounds:
-                        continue
-
-                    joint_positions[joint] = (x_prime, y_prime)
-                    # canvas[y_prime, x_prime] = [
-                    #     z,
-                    #     255,
-                    #     255,
-                    # ]  # numpy array dim 0 is y dim 1 is x
-                    # canvas[y_prime, x_prime] = 255
-            # self.connect_skel_joints(person)
+            if person in self.MHI_canvases:
+                self.decay_MHI_canvas(person)
+            self.check_and_initialize_canvases(person)
+            self.parse_skeleton_joints(person, attrs)
             self.fill_skeleton(person)
-            self.update_VMHI(person)
+            self.compute_moments(person)
+            self.update_image_volumes(person)
+
+    def check_and_initialize_canvases(self, person):
+        """
+        Instantiate canvases for each person as well as volume storage
+        """
+        if person not in self.MHI_canvases:
+            self.MHI_canvases[person] = np.copy(self.init_canvas)
+        if person not in self.MEI_canvases:
+            self.MEI_canvases[person] = np.copy(self.init_canvas)
+        if person not in self.MHI_volumes:
+            self.MHI_volumes[person] = deque(maxlen=self.tau)
+        if person not in self.MEI_volumes:
+            self.MEI_volumes[person] = deque(maxlen=self.tau)
 
     def connect_skel_joints(self, person):
         """
@@ -231,12 +234,15 @@ class MotionHistoryImager(PipelineNode):
                         # canvas[cc, rr, 1:] = 255
                         canvas[cc, rr] = 255
 
-    def update_VMHI(self, person):
+    def update_image_volumes(self, person):
         # we only want the values of the most recent position
         # so threshold the canvas to zero values other than 255
-        canvas = np.copy(self.MHI_canvases[person])
-        canvas[canvas < 255] = 0
-        self.MHI_volumes[person].append(canvas)
+        mhi_canvas = np.copy(self.MHI_canvases[person])
+        mei_canvas = np.copy(self.MEI_canvases[person])
+        mhi_canvas[mhi_canvas < 255] = 0
+        mei_canvas[mei_canvas < 255] = 0
+        self.MHI_volumes[person].append(mhi_canvas)
+        self.MEI_volumes[person].append(mei_canvas)
 
     def display_canvases(self):
         try:
