@@ -48,7 +48,7 @@ class MotionHistoryImager(PipelineNode):
         self.MHI_moments_volume = {}
         self.MEI_moments_volume = {}
         # How many frames in a volume
-        self.tau = 120
+        self.tau = 250
         # How fast will energy decay per frame (MHI)?
         # i.e. 0.9 = 90% of previous pixel value this frame
         self.decay = 3
@@ -288,7 +288,7 @@ class MotionHistoryImager(PipelineNode):
 
     def display_info_window(self):
         font = cv2.FONT_HERSHEY_SIMPLEX
-        fontscale = 0.5
+        fontscale = 0.55
         color = 255
         info_window = np.zeros((400, 1200))
         info_window = cv2.putText(
@@ -298,7 +298,7 @@ class MotionHistoryImager(PipelineNode):
             fontFace=font,
             fontScale=fontscale,
             color=color,
-            thickness=2,
+            thickness=1,
         )
         info_window = cv2.putText(
             info_window,
@@ -307,7 +307,7 @@ class MotionHistoryImager(PipelineNode):
             fontFace=font,
             fontScale=fontscale,
             color=color,
-            thickness=2,
+            thickness=1,
         )
         cv2.imshow("Hu Moments", info_window)
 
