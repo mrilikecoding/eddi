@@ -1,11 +1,12 @@
 import cv2
 import numpy as np
+import math
+import sys
 
 from skimage.draw import line
 
 from collections import deque
 from src.pipeline_node import PipelineNode
-from src.image_moments import ImageMoments
 
 
 class MotionHistoryImager(PipelineNode):
@@ -38,13 +39,16 @@ class MotionHistoryImager(PipelineNode):
         self.MHI_canvases = {}  # will store a MHI canvas for each person
         # Motion Energy Images
         self.MEI_canvases = {}  # will store a MEI canvas for each person
-        self.Hu_moments = {}
-        # Store volume of canvases
-        self.MHI_volumes = {}  # will store a VMHI for each person
-        self.MEI_volumes = {}  # will store a VMEI for each person
-        self.Hu_volumes = {}
+        # Store image moments for each person
+        self.MHI_Hu_moments = {}
+        self.MEI_Hu_moments = {}
+        # Store volume of canvases / moments
+        self.MHI_volume = {}  # will store a VMHI for each person
+        self.MEI_volume = {}  # will store a VMEI for each person
+        self.MHI_moments_volume = {}
+        self.MEI_moments_volume = {}
         # How many frames in a volume
-        self.tau = 60
+        self.tau = 120
         # How fast will energy decay per frame (MHI)?
         # i.e. 0.9 = 90% of previous pixel value this frame
         self.decay = 3
@@ -89,7 +93,33 @@ class MotionHistoryImager(PipelineNode):
             print(f"Problem parsing input device data: {e}")
 
     def compute_moments(self, person):
-        pass
+        """
+        This method computes image moments and then Hu moments
+        for each person's current MEI and MHI canvas. It converts
+        the result to log scale.
+        """
+        mhi_canvas = np.copy(self.MHI_canvases[person])
+        mei_canvas = np.copy(self.MEI_canvases[person])
+
+        mhi_moments = cv2.moments(mhi_canvas)
+        mei_moments = cv2.moments(mei_canvas)
+        mhi_hu_moments = cv2.HuMoments(mhi_moments).flatten()
+        mei_hu_moments = cv2.HuMoments(mei_moments).flatten()
+        # Log scale hu moments
+        for i in range(0, 7):
+            mei_hu_moments[i] = (
+                -1
+                * math.copysign(1.0, mei_hu_moments[i])
+                * math.log10(abs(mei_hu_moments[i]))
+            )
+            mhi_hu_moments[i] = (
+                -1
+                * math.copysign(1.0, mhi_hu_moments[i])
+                * math.log10(abs(mhi_hu_moments[i]))
+            )
+
+        self.MEI_Hu_moments[person] = mei_hu_moments
+        self.MHI_Hu_moments[person] = mhi_hu_moments
 
     def decay_MHI_canvas(self, person):
         # update energy values with decay rate
@@ -190,6 +220,7 @@ class MotionHistoryImager(PipelineNode):
             self.fill_skeleton(person)
             self.compute_moments(person)
             self.update_image_volumes(person)
+            self.update_moment_volumes(person)
 
     def check_and_initialize_canvases(self, person):
         """
@@ -199,10 +230,15 @@ class MotionHistoryImager(PipelineNode):
             self.MHI_canvases[person] = np.copy(self.init_canvas)
         if person not in self.MEI_canvases:
             self.MEI_canvases[person] = np.copy(self.init_canvas)
-        if person not in self.MHI_volumes:
-            self.MHI_volumes[person] = deque(maxlen=self.tau)
-        if person not in self.MEI_volumes:
-            self.MEI_volumes[person] = deque(maxlen=self.tau)
+        if person not in self.MHI_volume:
+            self.MHI_volume[person] = deque(maxlen=self.tau)
+        if person not in self.MEI_volume:
+            self.MEI_volume[person] = deque(maxlen=self.tau)
+        # also init hu moment objects
+        if person not in self.MHI_moments_volume:
+            self.MHI_moments_volume[person] = deque(maxlen=self.tau)
+        if person not in self.MEI_moments_volume:
+            self.MEI_moments_volume[person] = deque(maxlen=self.tau)
 
     def connect_skel_joints(self, person):
         """
@@ -241,8 +277,39 @@ class MotionHistoryImager(PipelineNode):
         mei_canvas = np.copy(self.MEI_canvases[person])
         mhi_canvas[mhi_canvas < 255] = 0
         mei_canvas[mei_canvas < 255] = 0
-        self.MHI_volumes[person].append(mhi_canvas)
-        self.MEI_volumes[person].append(mei_canvas)
+        self.MHI_volume[person].append(mhi_canvas)
+        self.MEI_volume[person].append(mei_canvas)
+
+    def update_moment_volumes(self, person):
+        mhi_hu_moments = np.copy(self.MHI_Hu_moments[person])
+        mei_hu_moments = np.copy(self.MEI_Hu_moments[person])
+        self.MHI_moments_volume[person].append(mhi_hu_moments)
+        self.MEI_moments_volume[person].append(mei_hu_moments)
+
+    def display_info_window(self):
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        fontscale = 0.5
+        color = 255
+        info_window = np.zeros((400, 1200))
+        info_window = cv2.putText(
+            info_window,
+            str(self.MHI_Hu_moments),
+            (10, 100),
+            fontFace=font,
+            fontScale=fontscale,
+            color=color,
+            thickness=2,
+        )
+        info_window = cv2.putText(
+            info_window,
+            str(self.MEI_Hu_moments),
+            (10, 300),
+            fontFace=font,
+            fontScale=fontscale,
+            color=color,
+            thickness=2,
+        )
+        cv2.imshow("Hu Moments", info_window)
 
     def display_canvases(self):
         try:
@@ -256,6 +323,7 @@ class MotionHistoryImager(PipelineNode):
             MHI_canvases = cv2.medianBlur(MHI_canvases, 5)
             MEI_canvases = cv2.medianBlur(MEI_canvases, 5)
             canvases = np.concatenate([MHI_canvases, MEI_canvases], axis=0)
+            self.display_info_window()
             cv2.imshow("MHI/MEI Canvas", canvases)
             cv2.waitKey(1)
         except Exception as e:
