@@ -1,12 +1,12 @@
 import cv2
 import numpy as np
 import math
-import sys
 
 from skimage.draw import line
 
 from collections import deque
 from src.pipeline_node import PipelineNode
+from src.gesture_segmenter import GestureSegmenter
 
 
 class MotionHistoryImager(PipelineNode):
@@ -48,7 +48,7 @@ class MotionHistoryImager(PipelineNode):
         self.MHI_moments_volume = {}
         self.MEI_moments_volume = {}
         # How many frames in a volume
-        self.tau = 250
+        self.tau = 150
         # How fast will energy decay per frame (MHI)?
         # i.e. 0.9 = 90% of previous pixel value this frame
         self.decay = 3
@@ -88,9 +88,31 @@ class MotionHistoryImager(PipelineNode):
 
             self.process_data_frame(input_object_instance)
             self.display_canvases()
+            self.display_info_window()
 
         except Exception as e:
             print(f"Problem parsing input device data: {e}")
+
+    def process_data_frame(self, input_object_instance):
+        """
+        This pipeline caller method parses the skel joints from the input object
+        Then it calls the function to render polygons agains the skel
+        Then it computes a motion history image volume and a motion energy image volume
+        Finally it performs a diff on the MEI and MHI volumes to pass as output
+        """
+        if not input_object_instance.people.items():
+            return
+        for person, attrs in input_object_instance.people.items():
+            if person in self.MHI_canvases:
+                self.decay_MHI_canvas(person)
+            self.check_and_initialize_canvases(person)
+            self.parse_skeleton_joints(person, attrs)
+            self.fill_skeleton(person)
+            self.compute_moments(person)
+            self.update_image_volumes(person)
+            self.update_moment_volumes(person)
+        volume_diffs = self.process_output_matrices()
+        gs = GestureSegmenter(volume_diffs, display=True)
 
     def compute_moments(self, person):
         """
@@ -204,24 +226,6 @@ class MotionHistoryImager(PipelineNode):
                 joint_positions[joint] = (x_prime, y_prime)
         # self.connect_skel_joints(person)
 
-    def process_data_frame(self, input_object_instance):
-        """
-        This pipeline caller method parses the skel joints from the input object
-        Then it calls the function to render polygons agains the skel
-        Then
-        """
-        if not input_object_instance.people.items():
-            return
-        for person, attrs in input_object_instance.people.items():
-            if person in self.MHI_canvases:
-                self.decay_MHI_canvas(person)
-            self.check_and_initialize_canvases(person)
-            self.parse_skeleton_joints(person, attrs)
-            self.fill_skeleton(person)
-            self.compute_moments(person)
-            self.update_image_volumes(person)
-            self.update_moment_volumes(person)
-
     def check_and_initialize_canvases(self, person):
         """
         Instantiate canvases for each person as well as volume storage
@@ -294,7 +298,7 @@ class MotionHistoryImager(PipelineNode):
         info_window = cv2.putText(
             info_window,
             str(self.MHI_Hu_moments),
-            (10, 100),
+            (10, 50),
             fontFace=font,
             fontScale=fontscale,
             color=color,
@@ -303,7 +307,7 @@ class MotionHistoryImager(PipelineNode):
         info_window = cv2.putText(
             info_window,
             str(self.MEI_Hu_moments),
-            (10, 300),
+            (10, 100),
             fontFace=font,
             fontScale=fontscale,
             color=color,
@@ -323,8 +327,20 @@ class MotionHistoryImager(PipelineNode):
             MHI_canvases = cv2.medianBlur(MHI_canvases, 5)
             MEI_canvases = cv2.medianBlur(MEI_canvases, 5)
             canvases = np.concatenate([MHI_canvases, MEI_canvases], axis=0)
-            self.display_info_window()
             cv2.imshow("MHI/MEI Canvas", canvases)
             cv2.waitKey(1)
         except Exception as e:
             print(f"Problem rendering MHI data: {e}")
+
+    def process_output_matrix(self):
+        """
+        This function computes the absolute diff between the MHI and MEI volumes
+        over duration Tau.
+        """
+        volume_diffs = {}
+        for person in self.MEI_Hu_moments.keys():
+            mei_volume = np.array(self.MEI_moments_volume[person])
+            mhi_volume = np.array(self.MHI_moments_volume[person])
+            # TODO need abs?
+            volume_diffs[person] = np.abs(np.subtract(mei_volume, mhi_volume))
+        return volume_diffs
