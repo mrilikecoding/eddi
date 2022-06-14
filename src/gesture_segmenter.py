@@ -5,8 +5,9 @@ import scipy.signal
 
 
 class GestureSegmenter:
-    def __init__(self, mei_mhi_volume_diffs, display=True):
+    def __init__(self, mei_mhi_volume_diffs, tau, display=True):
         self.display = display
+        self.tau = tau
         self.volumes = mei_mhi_volume_diffs
         self.similarity_matrices = {}
         for key, volume in self.volumes.items():
@@ -14,6 +15,8 @@ class GestureSegmenter:
 
         if display:
             self.display_similarity_matrices()
+            # TODO when finding the best similarity loop, pick the top 3 rather than the best
+            # do a heirarchy and see what the results are
 
     def compute_similarity_matrix(self, volume):
         similarity_matrix = np.zeros((self.tau, self.tau))
@@ -28,7 +31,7 @@ class GestureSegmenter:
             volume = np.copy(volume)
             cv2.normalize(volume, volume, 0, 255, cv2.NORM_MINMAX)
         diff_similarity_matrices = np.concatenate(
-            self.similarity_matrices.values(), axis=1
+            list(self.similarity_matrices.values()), axis=1
         )
         # for cv2 imshow, waitkey is set in caller, so don't put here, otherwise
         # this will be blocking

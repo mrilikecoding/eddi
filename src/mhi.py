@@ -112,7 +112,7 @@ class MotionHistoryImager(PipelineNode):
             self.update_image_volumes(person)
             self.update_moment_volumes(person)
         volume_diffs = self.process_output_matrices()
-        gs = GestureSegmenter(volume_diffs, display=True)
+        GestureSegmenter(volume_diffs, tau=self.tau, display=True)
 
     def compute_moments(self, person):
         """
@@ -332,7 +332,7 @@ class MotionHistoryImager(PipelineNode):
         except Exception as e:
             print(f"Problem rendering MHI data: {e}")
 
-    def process_output_matrix(self):
+    def process_output_matrices(self):
         """
         This function computes the absolute diff between the MHI and MEI volumes
         over duration Tau.
