@@ -48,7 +48,7 @@ class MotionHistoryImager(PipelineNode):
         self.MHI_moments_volume = {}
         self.MEI_moments_volume = {}
         # How many frames in a volume
-        self.tau = 150
+        self.tau = 75
         # How fast will energy decay per frame (MHI)?
         # i.e. 0.9 = 90% of previous pixel value this frame
         self.decay = 3
@@ -88,7 +88,9 @@ class MotionHistoryImager(PipelineNode):
 
             self.process_data_frame(input_object_instance)
             self.display_canvases()
-            self.display_info_window()
+            # self.display_info_wimmndow()
+            volume_diffs = self.process_output_matrices()
+            GestureSegmenter(volume_diffs, tau=self.tau, display=True)
 
         except Exception as e:
             print(f"Problem parsing input device data: {e}")
@@ -98,7 +100,6 @@ class MotionHistoryImager(PipelineNode):
         This pipeline caller method parses the skel joints from the input object
         Then it calls the function to render polygons agains the skel
         Then it computes a motion history image volume and a motion energy image volume
-        Finally it performs a diff on the MEI and MHI volumes to pass as output
         """
         if not input_object_instance.people.items():
             return
@@ -111,8 +112,6 @@ class MotionHistoryImager(PipelineNode):
             self.compute_moments(person)
             self.update_image_volumes(person)
             self.update_moment_volumes(person)
-        volume_diffs = self.process_output_matrices()
-        GestureSegmenter(volume_diffs, tau=self.tau, display=True)
 
     def compute_moments(self, person):
         """
