@@ -5,6 +5,11 @@ import scipy.signal
 
 
 class GestureSegmenter:
+    """
+    Analyzing energy diff similarity matrices inspired by
+    Schödl, Arno, et al. "Video textures." Proceedings of the 27th annual conference on Computer graphics and interactive techniques. 2000.
+    """
+
     def __init__(self, mei_mhi_volume_diffs, tau, display=True):
         self.display = display
         self.tau = tau  # max number of frame windows / volume size
@@ -19,16 +24,17 @@ class GestureSegmenter:
         # Your findBiggestLoop function has to compute this score for every choice of start and end,
         # and return the start and end frame numbers that corresponds to the largest score.
         self.display = display
-        self.alpha = 3.00
+        self.alpha = 0.50
         self.similarity_matrices = {}
         self.transition_matrices = {}
+        self.current_best_sequence = {}
         for key, volume in self.volumes.items():
             if len(volume):
                 self.similarity_matrices[key] = self.compute_similarity_matrix(volume)
                 self.transition_matrices[key] = self.compute_transition_matrix(
                     self.similarity_matrices[key]
                 )
-                self.find_motion(
+                self.current_best_sequence[key] = self.find_motion(
                     transition_matrix=self.transition_matrices[key], alpha=self.alpha
                 )
 
@@ -54,13 +60,8 @@ class GestureSegmenter:
         #         print("Candidate Indexes: {}".format(candidate_idxs))
         # else:
         #     biggestLoop = self.find_motion_sequences(transition_matrix, alpha)
-        biggestLoop = self.find_motion_sequences(transition_matrix, alpha)
-
-        idxs = biggestLoop
-        print("Loop bounds: {}".format(idxs))
-
-    def extract_motion_sequence(self, volume, starting_idx, ending_idx):
-        self.synthesize_sequence(volume, starting_idx, ending_idx)
+        best_sequence_idxs = self.find_motion_sequences(transition_matrix, alpha)
+        return best_sequence_idxs
 
     def compute_similarity_matrix(self, volume):
         similarity_matrix = np.zeros((self.tau, self.tau))
@@ -93,17 +94,27 @@ class GestureSegmenter:
         )
         # for cv2 imshow, waitkey is set in caller, so don't put here, otherwise
         # this will be blocking
-        h, w = transition_matrices.shape
-        transition_matrices = np.copy(transition_matrices)
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        fontscale = 0.55
+        transition_matrices = np.copy(transition_matrices).astype(np.float32)
         transition_matrices = cv2.resize(transition_matrices, (300, 300))
+        color = (255, 0, 255)
+        transition_matrices = cv2.cvtColor(transition_matrices, cv2.COLOR_BGR2RGB)
+        transition_matrices = cv2.putText(
+            transition_matrices,
+            str(self.current_best_sequence),
+            (10, 100),
+            fontFace=font,
+            fontScale=fontscale,
+            color=color,
+            thickness=2,
+        )
         cv2.imshow("Transition Matrices", transition_matrices)
 
     def synthesize_sequence(volume, start, end):
         """
         Pull out sequence by index from the given volume.
         """
-        frames = volume[start : end + 1, ...].astype("uint8")
-        return frames
 
     def binomial_filter_5(self):
         """
@@ -144,7 +155,7 @@ class GestureSegmenter:
         # note - this will output the non-padded input
         # so in essence it will shrink by 2 each direction
         transition_matrix = scipy.signal.convolve2d(
-            similarity.astype(np.float64), binomial, mode="valid"
+            similarity.astype(np.float32), binomial, mode="valid"
         )
         return transition_matrix
 
@@ -185,12 +196,12 @@ class GestureSegmenter:
         """
 
         rows, cols = transition_matrix.shape
-        scores = np.zeros((rows - 4, cols - 4), dtype=np.float64)
+        scores = np.zeros((rows - 4, cols - 4), dtype=np.float32)
         r, c = scores.shape
         for i in range(r):
             for j in range(c):
-                score = np.float64(alpha) * (j - i) - np.float64(
-                    transition_matrix[j+2, i+2]
+                score = np.float32(alpha) * (j - i) - np.float32(
+                    transition_matrix[j + 2, i + 2]
                 )
                 scores[i, j] = score
         biggest_motion_sequence = np.unravel_index(
