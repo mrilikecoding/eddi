@@ -10,10 +10,20 @@ class GestureSegmenter:
     Schödl, Arno, et al. "Video textures." Proceedings of the 27th annual conference on Computer graphics and interactive techniques. 2000.
     """
 
-    def __init__(self, mei_mhi_volume_diffs, tau, display=True):
+    def __init__(
+        self,
+        energy_moment_delta_volumes,
+        MEI_gesture_sequences={},
+        MHI_gesture_sequences={},
+        energy_diff_gesture_sequences={},
+        frame_window_length=75,
+        alpha=0.5,
+        display=True,
+    ):
         self.display = display
-        self.tau = tau  # max number of frame windows / volume size
-        self.volumes = mei_mhi_volume_diffs
+        # max number of frame windows / volume size
+        self.tau = frame_window_length
+        self.volumes = energy_moment_delta_volumes
         # Alpha is a scaling factor.
         # The size of the loop and the transition cost are likely to be in very different units,
         # so introduce a new parameter to make them comparable.
@@ -24,10 +34,15 @@ class GestureSegmenter:
         # Your findBiggestLoop function has to compute this score for every choice of start and end,
         # and return the start and end frame numbers that corresponds to the largest score.
         self.display = display
-        self.alpha = 0.50
+        self.alpha = alpha
         self.similarity_matrices = {}
         self.transition_matrices = {}
         self.current_best_sequence = {}
+        # for output
+        self.MEI_gesture_sequences = MEI_gesture_sequences
+        self.MHI_gesture_sequences = MHI_gesture_sequences
+        self.energy_diff_gesture_sequences = energy_diff_gesture_sequences
+
         for key, volume in self.volumes.items():
             if len(volume):
                 self.similarity_matrices[key] = self.compute_similarity_matrix(volume)
@@ -111,10 +126,12 @@ class GestureSegmenter:
         )
         cv2.imshow("Transition Matrices", transition_matrices)
 
-    def synthesize_sequence(volume, start, end):
-        """
-        Pull out sequence by index from the given volume.
-        """
+    def extract_frame_sequence(self, volume, start_end_idxs):
+        volume = np.copy(volume)
+        frame_sequence = volume[start_end_idxs[0] : start_end_idxs[1] + 1, ...].astype(
+            "uint8"
+        )
+        return frame_sequence
 
     def binomial_filter_5(self):
         """
@@ -209,3 +226,29 @@ class GestureSegmenter:
         )
         sequence_indices = (biggest_motion_sequence[0], biggest_motion_sequence[1])
         return sequence_indices
+
+    def segment_gestures(self, energy_moment_delta_volumes, mei_volumes, mhi_volumes):
+        best_person_frame_sequence_idxs = self.current_best_sequence
+        for person, sequence_idxs in best_person_frame_sequence_idxs.items():
+            if not person in self.MEI_gesture_sequences:
+                self.MEI_gesture_sequences[person] = []
+                self.MHI_gesture_sequences[person] = []
+                self.energy_diff_gesture_sequences[person] = []
+            energy_diff_sequence = self.extract_frame_sequence(
+                np.copy(energy_moment_delta_volumes[person]), sequence_idxs
+            )
+            mei_sequence = self.extract_frame_sequence(
+                np.copy(mei_volumes[person]), sequence_idxs
+            )
+            mhi_sequence = self.extract_frame_sequence(
+                np.copy(mhi_volumes[person]), sequence_idxs
+            )
+            self.energy_diff_gesture_sequences[person].append(energy_diff_sequence)
+            self.MEI_gesture_sequences[person].append(mei_sequence)
+            self.MHI_gesture_sequences[person].append(mhi_sequence)
+
+        return (
+            self.energy_diff_gesture_sequences,
+            self.MEI_gesture_sequences,
+            self.MHI_gesture_sequences,
+        )

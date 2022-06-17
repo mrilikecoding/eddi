@@ -6,7 +6,6 @@ from skimage.draw import line
 
 from collections import deque
 from src.pipeline_node import PipelineNode
-from src.gesture_segmenter import GestureSegmenter
 
 
 class MotionHistoryImager(PipelineNode):
@@ -16,7 +15,7 @@ class MotionHistoryImager(PipelineNode):
     a volume of Hu Moments
     """
 
-    def __init__(self, min_max_dimensions):
+    def __init__(self, min_max_dimensions, frame_window_length, frame_decay):
         self.input_joint_list = []
         # for normalizing constants
         self.min_x = min_max_dimensions["min_x"]
@@ -48,13 +47,12 @@ class MotionHistoryImager(PipelineNode):
         self.MHI_moments_volume = {}
         self.MEI_moments_volume = {}
         # How many frames in a volume
-        self.tau = 75
+        self.tau = frame_window_length
         # How fast will energy decay per frame (MHI)?
         # i.e. 0.9 = 90% of previous pixel value this frame
-        self.decay = 3
-        self.frame_position = (
-            0  # for rolling transition matrix for idx consistency with segmentation
-        )
+        self.decay = frame_decay
+        # TODO - try and roll matrix so same gestures are resequenced within frame window
+
         # joint position tracking
         self.joint_position_indices = {}
 
@@ -79,8 +77,6 @@ class MotionHistoryImager(PipelineNode):
             # "rightFoot": [],
         }
 
-        # store sequences by person - output index
-        self.gesture_sequences = {}
         super().__init__(min_max_dimensions)
 
     def process_input_device_values(self, input_object_instance):
@@ -92,26 +88,8 @@ class MotionHistoryImager(PipelineNode):
 
         self.process_data_frame(input_object_instance)
         self.display_canvases()
-        # self.display_info_wimmndow()
-        volume_diffs = self.process_output_matrices()
-
-        ### SEGMENT GESTURES ###
-        gs = GestureSegmenter(volume_diffs, tau=self.tau, display=True)
-        best_person_frame_sequence_idxs = gs.current_best_sequence
-        for person, sequence_idxs in best_person_frame_sequence_idxs.items():
-            if not person in self.gesture_sequences:
-                self.gesture_sequences[person] = []
-            sequence = self.extract_frame_sequence(
-                np.copy(self.MEI_volume[person]), sequence_idxs
-            )
-            self.gesture_sequences[person].append(sequence)
-
-    def extract_frame_sequence(self, volume, start_end_idxs):
-        volume = np.copy(volume)
-        frame_sequence = volume[start_end_idxs[0] : start_end_idxs[1] + 1, ...].astype(
-            "uint8"
-        )
-        return frame_sequence
+        # self.display_info_window()
+        self.energy_moment_delta_volumes = self.process_output_matrices()
 
     def process_data_frame(self, input_object_instance):
         """
