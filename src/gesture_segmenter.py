@@ -16,13 +16,19 @@ class GestureSegmenter:
         MEI_gesture_sequences={},
         MHI_gesture_sequences={},
         energy_diff_gesture_sequences={},
+        global_gesture_sequences=[],
         frame_window_length=75,
+        current_frame=0,
+        current_cycle=0,
         alpha=0.5,
         display=True,
+        gesture_heuristics={},
     ):
         self.display = display
         # max number of frame windows / volume size
         self.tau = frame_window_length
+        self.current_frame = current_frame
+        self.current_cycle = current_cycle
         self.volumes = energy_moment_delta_volumes
         # Alpha is a scaling factor.
         # The size of the loop and the transition cost are likely to be in very different units,
@@ -33,12 +39,14 @@ class GestureSegmenter:
         # You are looking for an alpha between these extremes (the goldilocks alpha).
         # Your findBiggestLoop function has to compute this score for every choice of start and end,
         # and return the start and end frame numbers that corresponds to the largest score.
+        self.gesture_heuristics = gesture_heuristics
         self.display = display
         self.alpha = alpha
         self.similarity_matrices = {}
         self.transition_matrices = {}
         self.current_best_sequence = {}
         # for output
+        self.global_gesture_sequences = global_gesture_sequences
         self.MEI_gesture_sequences = MEI_gesture_sequences
         self.MHI_gesture_sequences = MHI_gesture_sequences
         self.energy_diff_gesture_sequences = energy_diff_gesture_sequences
@@ -49,34 +57,47 @@ class GestureSegmenter:
                 self.transition_matrices[key] = self.compute_transition_matrix(
                     self.similarity_matrices[key]
                 )
-                self.current_best_sequence[key] = self.find_motion(
-                    transition_matrix=self.transition_matrices[key], alpha=self.alpha
+                sequence = self.find_motion(
+                    transition_matrix=self.transition_matrices[key],
+                    alpha=self.alpha,
                 )
+                if sequence is not None:
+                    self.current_best_sequence[key] = sequence
 
         if self.display and self.similarity_matrices and self.transition_matrices:
             self.display_similarity_matrices()
             self.display_transition_matrices()
-            # TODO when finding the best similarity loop, pick the top 3 rather than the best
-            # do a heirarchy and see what the results are
+        # TODO when finding the best similarity loop, pick the top 3 rather than the best
+        # do a heirarchy and see what the results are
+
+    def valid_magnitude(self, idxs):
+        """
+        return whether passed indices are within a desireable magnitude range
+        """
+        magnitude = np.abs(idxs[0] - idxs[1])
+        min_mag = self.gesture_heuristics["minimum_frame_count"]
+        max_mag = self.gesture_heuristics["maximum_frame_count"]
+        return min_mag <= magnitude <= max_mag
+
+    def valid_energy_sum(self, energy_diff_sequence):
+        energy_sum = self.compute_total_energy_change(energy_diff_sequence)
+        return energy_sum >= self.gesture_heuristics["energy_threshold"]
+
+    def valid_gesture_cycle(self):
+        """
+        return false if any stored previously stored gestures have come from this cycle
+        """
+        return not any(
+            [
+                sequence["meta"]["at_cycle"] == self.current_cycle
+                for sequence in self.global_gesture_sequences
+            ]
+        )
 
     def find_motion(self, transition_matrix, alpha=0.5):
-        candidate_idxs = []
-        candidate_alphas = []
-        idxs = (0, 0)
-        # alphas = np.r_[0.003:0.02:1001j]
-        # if alpha == 0:
-        #     for a in alphas:
-        #         print("Testing alpha: {}".format(a))
-        #         biggestLoop = self.find_motion_sequences(transition_matrix, a)
-        #     if biggestLoop not in candidate_idxs:
-        #         candidate_idxs.append(biggestLoop)
-        #         candidate_alphas.append(a)
-        #         print("Candidate Alphas: {}".format(candidate_alphas))
-        #         print("Candidate Indexes: {}".format(candidate_idxs))
-        # else:
-        #     biggestLoop = self.find_motion_sequences(transition_matrix, alpha)
         best_sequence_idxs = self.find_motion_sequences(transition_matrix, alpha)
-        return best_sequence_idxs
+        if self.valid_gesture_cycle() and self.valid_magnitude(best_sequence_idxs):
+            return best_sequence_idxs
 
     def compute_similarity_matrix(self, volume):
         similarity_matrix = np.zeros((self.tau, self.tau))
@@ -227,7 +248,20 @@ class GestureSegmenter:
         sequence_indices = (biggest_motion_sequence[0], biggest_motion_sequence[1])
         return sequence_indices
 
+    def compute_total_energy_change(self, energy_diff_sequence):
+        total_energy_change = np.sum(energy_diff_sequence)
+        return total_energy_change
+
     def segment_gestures(self, energy_moment_delta_volumes, mei_volumes, mhi_volumes):
+        """
+        if the current best sequence is None, just return.
+        This will be the case if the best gesture does not meet
+        heuristic requirements (like gesture magnitude)
+        Otherwise, if we have sequence indices, return the sequence as applied to the
+        passed volumes
+        """
+        if self.current_best_sequence is None:
+            return
         best_person_frame_sequence_idxs = self.current_best_sequence
         for person, sequence_idxs in best_person_frame_sequence_idxs.items():
             if not person in self.MEI_gesture_sequences:
@@ -237,6 +271,8 @@ class GestureSegmenter:
             energy_diff_sequence = self.extract_frame_sequence(
                 np.copy(energy_moment_delta_volumes[person]), sequence_idxs
             )
+            if not self.valid_energy_sum(energy_diff_sequence):
+                continue
             mei_sequence = self.extract_frame_sequence(
                 np.copy(mei_volumes[person]), sequence_idxs
             )
@@ -246,9 +282,26 @@ class GestureSegmenter:
             self.energy_diff_gesture_sequences[person].append(energy_diff_sequence)
             self.MEI_gesture_sequences[person].append(mei_sequence)
             self.MHI_gesture_sequences[person].append(mhi_sequence)
+            self.global_gesture_sequences.append(
+                {
+                    "MEI": mei_sequence,
+                    "MHI": mhi_sequence,
+                    "energy_diff": energy_diff_sequence,
+                    "meta": {
+                        "at_frame": self.current_frame,
+                        "at_cycle": self.current_cycle,
+                        "idxs": self.current_best_sequence,
+                        "energy": self.compute_total_energy_change(
+                            energy_diff_sequence
+                        ),
+                    },
+                }
+            )
+            print("Gesture detected!")
 
         return (
             self.energy_diff_gesture_sequences,
             self.MEI_gesture_sequences,
             self.MHI_gesture_sequences,
+            self.global_gesture_sequences,
         )
