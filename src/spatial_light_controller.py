@@ -33,16 +33,20 @@ class SpatialLightController(Controller):
             self.space_min_max_dimensions,
         )
 
-        # TODO - put this in global config
-        # computed per person sequences
-        # as MHI, MEI, and their diff (they'll correspond)
+        # TODO - put this stuff in a global config
+
+        # this is a scaling factor that adjusts the size of gesture loops by smoothing the transition matrix
+        self.gesture_limit_reached = False
+        self.gesture_sensitivity = 0.5  # aka alpha in gesture segmenter
         self.gesture_limit = 5
         self.frame_window_length = 50
+        self.display_gesture_matrices = True
         self.maximum_gesture_frame_count = 40
         self.minimum_gesture_frame_count = 20
-        self.gesture_energy_threshold = 1200  # TODO find good way to determine this
+        self.gesture_energy_threshold = 4.25  # TODO find good way to determine this
         self.MEI_gesture_sequences = {}
         self.MHI_gesture_sequences = {}
+        self.MEI_MHI_diff_gesture_sequences = {}
         self.energy_diff_gesture_sequences = {}
         self.global_gesture_sequences = []
         self.gesture_heuristics = {
@@ -63,6 +67,25 @@ class SpatialLightController(Controller):
             self.motion_history_imager,
         ]
 
+    def process_input_device_values(self, input_object_instance):
+        for node in self.input_processing_pipeline:
+            node.process_input_device_values(input_object_instance)
+
+        # motion history imager processes volume of mei and mhi images as well as their diff
+        energy_moment_delta_volumes = (
+            self.motion_history_imager.energy_moment_delta_volumes
+        )
+        mei_volumes = self.motion_history_imager.MEI_volumes
+        mhi_volumes = self.motion_history_imager.MHI_volumes
+        if energy_moment_delta_volumes and mei_volumes and mhi_volumes:
+            self.segment_gestures(
+                energy_moment_delta_volumes,
+                mei_volumes,
+                mhi_volumes,
+            )
+        if len(self.global_gesture_sequences) >= self.gesture_limit:
+            self.display_captured_gestures()
+
     def set_output_devices(self, output_devices):
         """
         This is called by the client when it is started
@@ -82,29 +105,34 @@ class SpatialLightController(Controller):
             node.index_output_devices_by_config_attribute()
 
     ### SEGMENT GESTURES ###
-    def segment_gestures(self, energy_moment_delta_volumes, mei_volumes, mhi_volumes):
-        if not energy_moment_delta_volumes:
-            return
+    def segment_gestures(
+        self,
+        energy_moment_delta_volumes,
+        mei_volumes,
+        mhi_volumes,
+    ):
         # outputs an updated dictionary of gesture sequences based on the
         # previously computed best sequence of the current volumes
         if len(self.global_gesture_sequences) < self.gesture_limit:
             # init a new gesture segmenter that computes the best frame start/end
             # for the passed volume
             gs = GestureSegmenter(
-                energy_moment_delta_volumes,
-                self.energy_diff_gesture_sequences,
-                self.MEI_gesture_sequences,
-                self.MHI_gesture_sequences,
-                self.global_gesture_sequences,
+                energy_diff_gesture_sequences=self.energy_diff_gesture_sequences,
+                energy_moment_delta_volumes=energy_moment_delta_volumes,
+                MEI_gesture_sequences=self.MEI_gesture_sequences,
+                MHI_gesture_sequences=self.MHI_gesture_sequences,
+                global_gesture_sequences=self.global_gesture_sequences,
                 frame_window_length=self.frame_window_length,
                 current_frame=self.current_frame,
                 current_cycle=self.current_cycle,
-                alpha=0.5,
-                display=True,
+                alpha=self.gesture_sensitivity,
+                display=self.display_gesture_matrices,
                 gesture_heuristics=self.gesture_heuristics,
             )
             sequences = gs.segment_gestures(
-                energy_moment_delta_volumes, mei_volumes, mhi_volumes
+                energy_moment_delta_volumes,
+                mei_volumes,
+                mhi_volumes,
             )
             if sequences is not None:
                 (
@@ -113,11 +141,6 @@ class SpatialLightController(Controller):
                     self.MHI_gesture_sequences,
                     self.global_gesture_sequences,
                 ) = sequences
-        else:
-            # TODO remove at some point - this is for testing
-            # NOTE - this call is in the loop, so it'll
-            # repeat every capture gesture by holding a key
-            self.display_captured_gestures()
         # update the frame position within the frame window
         # this is useful for not selecting the same gesture
         # over and over again within a window
@@ -136,29 +159,29 @@ class SpatialLightController(Controller):
         for sequence_count, sequence in enumerate(self.global_gesture_sequences):
             sequence_length = len(sequence["MEI"])
             for frame_count, frame in enumerate(sequence["MEI"]):
-                info = f"Seq: {sequence_count}, Frame: {frame_count}/{sequence_length}"
+                info1 = (
+                    f"Seq: {sequence_count + 1}, Frame: {frame_count}/{sequence_length}"
+                )
+                info2 = f"Cycle: {sequence['meta']['at_cycle']} Energy: {sequence['meta']['energy']}"
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 frame = cv2.putText(
                     frame,
-                    info,
+                    info1,
                     (10, 10),
                     fontFace=font,
                     fontScale=fontscale,
                     color=color,
                     thickness=2,
                 )
+                frame = cv2.putText(
+                    frame,
+                    info2,
+                    (10, 30),
+                    fontFace=font,
+                    fontScale=fontscale,
+                    color=color,
+                    thickness=2,
+                )
                 cv2.imshow("Gesture", frame)
+                cv2.setWindowProperty("Gesture", cv2.WND_PROP_TOPMOST, 1)
                 cv2.waitKey(0)
-
-    def process_input_device_values(self, input_object_instance):
-        for node in self.input_processing_pipeline:
-            node.process_input_device_values(input_object_instance)
-
-        # motion history imager processes volume of mei and mhi images as well as their diff
-        energy_moment_delta_volumes = (
-            self.motion_history_imager.energy_moment_delta_volumes
-        )
-        mei_volumes = self.motion_history_imager.MEI_volume
-        mhi_volumes = self.motion_history_imager.MHI_volume
-        if energy_moment_delta_volumes and mei_volumes and mhi_volumes:
-            self.segment_gestures(energy_moment_delta_volumes, mei_volumes, mhi_volumes)
