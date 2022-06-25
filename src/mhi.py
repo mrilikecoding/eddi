@@ -42,16 +42,16 @@ class MotionHistoryImager(PipelineNode):
         self.MHI_Hu_moments = {}
         self.MEI_Hu_moments = {}
         # Store volume of canvases / moments
-        self.MHI_volume = {}  # will store a VMHI for each person
-        self.MEI_volume = {}  # will store a VMEI for each person
-        self.MHI_moments_volume = {}
-        self.MEI_moments_volume = {}
+        self.MHI_volumes = {}  # will store a VMHI for each person
+        self.MEI_volumes = {}  # will store a VMEI for each person
+        self.MHI_moments_volumes = {}
+        self.MEI_moments_volumes = {}
+        self.energy_moment_delta_volumes = {}
         # How many frames in a volume
         self.tau = frame_window_length
         # How fast will energy decay per frame (MHI)?
         # i.e. 0.9 = 90% of previous pixel value this frame
         self.decay = frame_decay
-        # TODO - try and roll matrix so same gestures are resequenced within frame window
 
         # joint position tracking
         self.joint_position_indices = {}
@@ -87,6 +87,7 @@ class MotionHistoryImager(PipelineNode):
             self.input_joint_list = input_object_instance.joint_list
 
         self.process_data_frame(input_object_instance)
+        # TODO make display conditional
         self.display_canvases()
         # self.display_info_window()
         self.energy_moment_delta_volumes = self.process_output_matrices()
@@ -102,7 +103,7 @@ class MotionHistoryImager(PipelineNode):
         for person, attrs in input_object_instance.people.items():
             if person in self.MHI_canvases:
                 self.decay_MHI_canvas(person)
-            self.check_and_initialize_canvases(person)
+            self.check_and_initialize_canvases_and_volumes(person)
             self.parse_skeleton_joints(person, attrs)
             self.fill_skeleton(person)
             self.compute_moments(person)
@@ -178,6 +179,9 @@ class MotionHistoryImager(PipelineNode):
         # canvas = self.MHI_canvases[person]
 
         # create offset for centering skel on canvas (torso is good choice)
+        if self.center_joint not in attrs:
+            return
+
         center_joint_x = self.normalize_point(
             attrs[self.center_joint]["x"], self.min_x, self.max_x, 0, self.w
         )
@@ -221,7 +225,7 @@ class MotionHistoryImager(PipelineNode):
                 joint_positions[joint] = (x_prime, y_prime)
         # self.connect_skel_joints(person)
 
-    def check_and_initialize_canvases(self, person):
+    def check_and_initialize_canvases_and_volumes(self, person):
         """
         Instantiate canvases for each person as well as volume storage
         """
@@ -229,15 +233,15 @@ class MotionHistoryImager(PipelineNode):
             self.MHI_canvases[person] = np.copy(self.init_canvas)
         if person not in self.MEI_canvases:
             self.MEI_canvases[person] = np.copy(self.init_canvas)
-        if person not in self.MHI_volume:
-            self.MHI_volume[person] = deque(maxlen=self.tau)
-        if person not in self.MEI_volume:
-            self.MEI_volume[person] = deque(maxlen=self.tau)
+        if person not in self.MHI_volumes:
+            self.MHI_volumes[person] = deque(maxlen=self.tau)
+        if person not in self.MEI_volumes:
+            self.MEI_volumes[person] = deque(maxlen=self.tau)
         # also init hu moment objects
-        if person not in self.MHI_moments_volume:
-            self.MHI_moments_volume[person] = deque(maxlen=self.tau)
-        if person not in self.MEI_moments_volume:
-            self.MEI_moments_volume[person] = deque(maxlen=self.tau)
+        if person not in self.MHI_moments_volumes:
+            self.MHI_moments_volumes[person] = deque(maxlen=self.tau)
+        if person not in self.MEI_moments_volumes:
+            self.MEI_moments_volumes[person] = deque(maxlen=self.tau)
 
     def connect_skel_joints(self, person):
         """
@@ -274,16 +278,16 @@ class MotionHistoryImager(PipelineNode):
         # so threshold the canvas to zero values other than 255
         mhi_canvas = np.copy(self.MHI_canvases[person])
         mei_canvas = np.copy(self.MEI_canvases[person])
-        mhi_canvas[mhi_canvas < 255] = 0
-        mei_canvas[mei_canvas < 255] = 0
-        self.MHI_volume[person].append(mhi_canvas)
-        self.MEI_volume[person].append(mei_canvas)
+        mhi_canvas[mhi_canvas < 0] = 0
+        mei_canvas[mei_canvas < 0] = 0
+        self.MHI_volumes[person].append(mhi_canvas)
+        self.MEI_volumes[person].append(mei_canvas)
 
     def update_moment_volumes(self, person):
         mhi_hu_moments = np.copy(self.MHI_Hu_moments[person])
         mei_hu_moments = np.copy(self.MEI_Hu_moments[person])
-        self.MHI_moments_volume[person].append(mhi_hu_moments)
-        self.MEI_moments_volume[person].append(mei_hu_moments)
+        self.MHI_moments_volumes[person].append(mhi_hu_moments)
+        self.MEI_moments_volumes[person].append(mei_hu_moments)
 
     def display_info_window(self):
         font = cv2.FONT_HERSHEY_SIMPLEX
@@ -321,8 +325,15 @@ class MotionHistoryImager(PipelineNode):
             MEI_canvases = cv2.resize(MEI_canvases, (self.w * 2, self.h * 2))
             MHI_canvases = cv2.medianBlur(MHI_canvases, 5)
             MEI_canvases = cv2.medianBlur(MEI_canvases, 5)
-            canvases = np.concatenate([MHI_canvases, MEI_canvases], axis=0)
-            cv2.imshow("MHI/MEI Canvas", canvases)
+            diff_canvases = cv2.medianBlur(
+                np.abs(np.subtract(MEI_canvases, MHI_canvases)), 5
+            )
+            canvases = np.concatenate(
+                [MHI_canvases, MEI_canvases, diff_canvases], axis=0
+            )
+            window_name = "MHI/MEI Canvas"
+            cv2.imshow(window_name, canvases)
+            cv2.setWindowProperty(window_name, cv2.WND_PROP_TOPMOST, 1)
             cv2.waitKey(1)
         except Exception as e:
             print(f"Problem rendering MHI data: {e}")
@@ -334,8 +345,8 @@ class MotionHistoryImager(PipelineNode):
         """
         volume_diffs = {}
         for person in self.MEI_Hu_moments.keys():
-            mei_volume = np.array(self.MEI_moments_volume[person])
-            mhi_volume = np.array(self.MHI_moments_volume[person])
+            mei_volume = np.array(self.MEI_moments_volumes[person])
+            mhi_volume = np.array(self.MHI_moments_volumes[person])
             # TODO need abs?
             volume_diffs[person] = np.abs(np.subtract(mei_volume, mhi_volume))
         return volume_diffs
