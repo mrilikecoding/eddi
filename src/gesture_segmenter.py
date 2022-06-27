@@ -15,6 +15,7 @@ class GestureSegmenter:
         energy_moment_delta_volumes={},
         MEI_gesture_sequences={},
         MHI_gesture_sequences={},
+        energy_diff_gesture_sequences={},
         global_gesture_sequences=[],
         frame_window_length=75,
         current_frame=0,
@@ -46,6 +47,7 @@ class GestureSegmenter:
         self.global_gesture_sequences = global_gesture_sequences
         self.MEI_gesture_sequences = MEI_gesture_sequences
         self.MHI_gesture_sequences = MHI_gesture_sequences
+        self.energy_diff_gesture_sequences = energy_diff_gesture_sequences
 
         for key, volume in self.volumes.items():
             if len(volume):
