@@ -19,6 +19,7 @@ class Lumi:
         self.input_registry = {}
         self.input_dispatcher = dispatcher.Dispatcher()
         self.light_controller = SpatialLightController()
+        self.time = 0  # for sequencing - incremented in #update
 
     def register_output_device(self, device):
         self.output_registry[device.name] = device
@@ -95,6 +96,7 @@ class Lumi:
         for _, device in self.input_registry.items():
             self.light_controller.process_input_device_values(device)
 
+        # TODO implemented sequencing
         for _, device in self.output_registry.items():
             r = device.get_value("r")
             g = device.get_value("g")
@@ -106,3 +108,4 @@ class Lumi:
 
     def update(self):
         self.update_output_devices()
+        self.time += 1
