@@ -5,6 +5,7 @@ from src.mhi import MotionHistoryImager
 from src.gesture_pipeline_runner import GesturePipelineRunner
 
 
+# TODO rename this class - maybe something like IOPipeline
 class SpatialLightController(Controller):
     def __init__(self, output_devices={}):
 

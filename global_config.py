@@ -18,8 +18,8 @@ global_config = {
     "gesture_sensitivity": 0.5,  # aka alpha in gesture segmenter
     "gesture_heuristics": {
         "gesture_sensitivity": 0.3,
-        "minimum_frame_count": 20,  # min magnitude of gesture
-        "maximum_frame_count": 40,  # max magnitude of gesture
+        "minimum_frame_count": 20,  # min magnitude (frame count) of gesture
+        "maximum_frame_count": 40,  # max magnitude (frame count) of gesture
         "energy_threshold": 5.0,  # how much energy should a gesture have
     },
 }
