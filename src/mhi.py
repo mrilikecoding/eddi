@@ -32,6 +32,7 @@ class MotionHistoryImager(PipelineNode):
         self.canvas_center = (self.w / 2, self.h / 2)
         self.center_joint = "torso"  # name of joint to center MHI on
 
+        self.tracking = False  # are we tracking any user?
         # self.init_canvas = np.zeros((self.h, self.w, 3), dtype=np.uint8)
         self.init_canvas = np.zeros((self.h, self.w), dtype=np.uint8)
         # Motion History Images (Time Decayed)
@@ -79,10 +80,19 @@ class MotionHistoryImager(PipelineNode):
 
         super().__init__(min_max_dimensions)
 
+    def input_object_is_tracking_user(self):
+        return any(list(self.input_object_instance.tracking.values()))
+
     def process_input_device_values(self, input_object_instance):
         """
         This is the primary entry point for this pipeline node
         """
+        self.input_object_instance = input_object_instance
+        if self.input_object_is_tracking_user():
+            self.tracking = True
+        else:
+            self.tracking = False
+
         if not self.input_joint_list:
             self.input_joint_list = input_object_instance.joint_list
 
@@ -110,6 +120,15 @@ class MotionHistoryImager(PipelineNode):
             self.update_image_volumes(person)
             self.update_moment_volumes(person)
 
+    def safe_log10(self, x, eps=1e-10):
+        """
+        protect against zero division edge cases
+        this basically replaces 0 with extremely small val
+        """
+        result = np.where(x > eps, x, -10)
+        np.log10(result, out=result, where=result > 0)
+        return result
+
     def compute_moments(self, person):
         """
         This method computes image moments and then Hu moments
@@ -128,12 +147,12 @@ class MotionHistoryImager(PipelineNode):
             mei_hu_moments[i] = (
                 -1
                 * math.copysign(1.0, mei_hu_moments[i])
-                * math.log10(abs(mei_hu_moments[i]))
+                * self.safe_log10(abs(mei_hu_moments[i]))
             )
             mhi_hu_moments[i] = (
                 -1
                 * math.copysign(1.0, mhi_hu_moments[i])
-                * math.log10(abs(mhi_hu_moments[i]))
+                * self.safe_log10(abs(mhi_hu_moments[i]))
             )
 
         self.MEI_Hu_moments[person] = mei_hu_moments
@@ -150,7 +169,11 @@ class MotionHistoryImager(PipelineNode):
         For a person tracked in the input object instance
         Draw polyfilled skeleton for MEI and MHI canvases
         """
-        if person not in self.MHI_canvases or person not in self.MEI_canvases:
+        if (
+            person not in self.MHI_canvases
+            or person not in self.MEI_canvases
+            or not self.tracking
+        ):
             return
         MEI_canvas = self.MEI_canvases[person]
         MHI_canvas = self.MHI_canvases[person]
@@ -165,11 +188,14 @@ class MotionHistoryImager(PipelineNode):
                 joint_inputs[joint] for joint in joint_list if joint in joint_inputs
             ]
             joint_positions = np.array(list(joints))
-            cv2.fillConvexPoly(MHI_canvas, joint_positions, 255)
-            cv2.fillConvexPoly(MEI_canvas, joint_positions, 255)
+            if len(joint_positions):
+                cv2.fillConvexPoly(MHI_canvas, joint_positions, 255)
+                cv2.fillConvexPoly(MEI_canvas, joint_positions, 255)
 
     def parse_skeleton_joints(self, person, attrs):
         # init joint position lookup table if we don't have one
+        if not self.tracking:
+            return
         if person not in self.joint_position_indices:
             self.joint_position_indices[person] = {}
         joint_positions = self.joint_position_indices[person]
@@ -229,9 +255,9 @@ class MotionHistoryImager(PipelineNode):
         """
         Instantiate canvases for each person as well as volume storage
         """
-        if person not in self.MHI_canvases:
+        if person not in self.MHI_canvases or self.tracking == False:
             self.MHI_canvases[person] = np.copy(self.init_canvas)
-        if person not in self.MEI_canvases:
+        if person not in self.MEI_canvases or self.tracking == False:
             self.MEI_canvases[person] = np.copy(self.init_canvas)
         if person not in self.MHI_volumes:
             self.MHI_volumes[person] = deque(maxlen=self.tau)
@@ -325,9 +351,7 @@ class MotionHistoryImager(PipelineNode):
             MEI_canvases = cv2.resize(MEI_canvases, (self.w * 2, self.h * 2))
             MHI_canvases = cv2.medianBlur(MHI_canvases, 5)
             MEI_canvases = cv2.medianBlur(MEI_canvases, 5)
-            canvases = np.concatenate(
-                [MHI_canvases, MEI_canvases], axis=0
-            )
+            canvases = np.concatenate([MHI_canvases, MEI_canvases], axis=0)
             window_name = "MHI/MEI Canvas"
             cv2.imshow(window_name, canvases)
             cv2.setWindowProperty(window_name, cv2.WND_PROP_TOPMOST, 1)
