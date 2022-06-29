@@ -116,9 +116,16 @@ class MotionHistoryImager(PipelineNode):
             self.check_and_initialize_canvases_and_volumes(person)
             self.parse_skeleton_joints(person, attrs)
             self.fill_skeleton(person)
+            self.post_process_canvas(person)
             self.compute_moments(person)
             self.update_image_volumes(person)
             self.update_moment_volumes(person)
+
+    def post_process_canvas(self, person):
+        self.MHI_canvases[person]
+        self.MEI_canvases[person]
+        cv2.medianBlur(self.MHI_canvases[person], 5)
+        cv2.medianBlur(self.MEI_canvases[person], 5)
 
     def safe_log10(self, x, eps=1e-10):
         """
@@ -349,8 +356,6 @@ class MotionHistoryImager(PipelineNode):
                 MEI_canvases = np.concatenate(list(self.MEI_canvases.values()), axis=1)
             MHI_canvases = cv2.resize(MHI_canvases, (self.w * 2, self.h * 2))
             MEI_canvases = cv2.resize(MEI_canvases, (self.w * 2, self.h * 2))
-            MHI_canvases = cv2.medianBlur(MHI_canvases, 5)
-            MEI_canvases = cv2.medianBlur(MEI_canvases, 5)
             canvases = np.concatenate([MHI_canvases, MEI_canvases], axis=0)
             window_name = "MHI/MEI Canvas"
             cv2.imshow(window_name, canvases)
