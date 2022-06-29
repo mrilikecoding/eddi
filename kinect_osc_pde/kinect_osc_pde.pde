@@ -160,12 +160,18 @@ void draw(){
 void onNewUser(SimpleOpenNI curContext, int userId){
   // start tracking of user id
   curContext.startTrackingSkeleton(userId);
-  println("Tracking User: " + userId);
+  OscMessage messageOut = new OscMessage("/kinect");
+  messageOut.add("tracking");
+  messageOut.add(userID);
+  oscP5.send(messageOut, oscSendServer);
 } //void onNewUser(SimpleOpenNI curContext, int userId)
 
 void onLostUser(SimpleOpenNI curContext, int userId){
   // print user lost and user id
-  println("User Lost - userId: " + userId);
+  OscMessage messageOut = new OscMessage("/kinect");
+  messageOut.add("lost");
+  messageOut.add(userID);
+  oscP5.send(messageOut, oscSendServer);
 } //void onLostUser(SimpleOpenNI curContext, int userId)
 
 void onVisibleUser(SimpleOpenNI curContext, int userId){
