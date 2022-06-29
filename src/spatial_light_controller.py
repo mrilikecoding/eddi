@@ -23,6 +23,7 @@ class SpatialLightController(Controller):
         self.global_gesture_sequences = []
 
         # Motion Imaging Initialization
+        # track global input image state in this class
         self.motion_history_imager = MotionHistoryImager(
             min_max_dimensions=global_config["space_min_max_dimensions"],
             frame_window_length=global_config["frame_window_length"],
@@ -30,6 +31,7 @@ class SpatialLightController(Controller):
         )
 
         # Gesture Pipeline Initialization
+        # track global gesture state in this class
         self.gesture_pipeline = GesturePipelineRunner(
             frame_window_length=global_config["frame_window_length"],
             display_gesture_matrices=global_config["display_gesture_matrices"],
@@ -50,6 +52,8 @@ class SpatialLightController(Controller):
             node.process_input_device_values(input_object_instance)
 
         # motion history imager processes volume of mei and mhi images as well as their diff
+        # NOTE - these volumes operate as a FIFO array of images of length frame_window_length
+        # each loop, the latest frame is added to the front and the oldest is pushed out
         energy_moment_delta_volumes = (
             self.motion_history_imager.energy_moment_delta_volumes
         )

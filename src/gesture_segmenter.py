@@ -2,6 +2,7 @@ import math
 import cv2
 import numpy as np
 import scipy.signal
+from src import utils
 
 
 class GestureSegmenter:
@@ -43,7 +44,7 @@ class GestureSegmenter:
         self.similarity_matrices = {}
         self.transition_matrices = {}
         self.current_best_sequence = {}
-        # for output
+        # NOTE for output - these sequences are passed in, appended to, and returned
         self.global_gesture_sequences = global_gesture_sequences
         self.MEI_gesture_sequences = MEI_gesture_sequences
         self.MHI_gesture_sequences = MHI_gesture_sequences
@@ -63,7 +64,7 @@ class GestureSegmenter:
                     self.current_best_sequence[key] = sequence
 
         if self.display and self.similarity_matrices and self.transition_matrices:
-            self.display_similarity_matrices()
+            # self.display_similarity_matrices()
             self.display_transition_matrices()
 
     def valid_magnitude(self, idxs):
@@ -111,34 +112,42 @@ class GestureSegmenter:
         # this will b5e blocking
         diff_similarity_matrices = np.copy(diff_similarity_matrices)
         diff_similarity_matrices = cv2.resize(diff_similarity_matrices, (300, 300))
-        cv2.imshow("MEI/MHI Diff Similarity Matrices", diff_similarity_matrices)
+        utils.display_image("MEI/MHI Diff Similarity Matrices", diff_similarity_matrices, wait=False)
 
     def display_transition_matrices(self):
-        for volume in self.transition_matrices.values():
-            volume = np.copy(volume)
-            cv2.normalize(volume, volume, 0, 255, cv2.NORM_MINMAX)
-        transition_matrices = np.concatenate(
-            list(self.transition_matrices.values()), axis=1
-        )
+        matrices = []
+        for key, matrix in self.transition_matrices.items():
+            matrix = np.copy(matrix).astype(np.float32)
+            matrix = cv2.cvtColor(matrix, cv2.COLOR_BGR2RGB)
+            cv2.normalize(matrix, matrix, 0, 255, cv2.NORM_MINMAX)
+            if key in self.current_best_sequence:
+                sequence_indices = self.current_best_sequence[key]
+                matrix = cv2.circle(
+                    matrix,
+                    (sequence_indices[0], sequence_indices[0]),
+                    2,
+                    (255, 0, 0),
+                    -1,
+                )
+                matrix = cv2.circle(
+                    matrix,
+                    (sequence_indices[1], sequence_indices[1]),
+                    2,
+                    (255, 0, 0),
+                    -1,
+                )
+            matrices.append(matrix)
+        transition_matrices = np.concatenate(matrices, axis=1)
         # for cv2 imshow, waitkey is set in caller, so don't put here, otherwise
         # this will be blocking
-        # TODO make an imshow util that bakes in presets
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        fontscale = 0.55
-        transition_matrices = np.copy(transition_matrices).astype(np.float32)
         transition_matrices = cv2.resize(transition_matrices, (300, 300))
-        color = (255, 0, 255)
-        transition_matrices = cv2.cvtColor(transition_matrices, cv2.COLOR_BGR2RGB)
-        transition_matrices = cv2.putText(
+        transition_matrices = utils.put_text(
             transition_matrices,
             str(self.current_best_sequence),
             (10, 100),
-            fontFace=font,
-            fontScale=fontscale,
-            color=color,
-            thickness=2,
+            (255, 0, 255),
         )
-        cv2.imshow("Transition Matrices", transition_matrices)
+        utils.display_image("Transition Matrices", transition_matrices, wait=False)
 
     def extract_frame_sequence(self, volume, start_end_idxs):
         volume = np.copy(volume)
@@ -235,18 +244,22 @@ class GestureSegmenter:
         sequence_indices = (biggest_motion_sequence[0], biggest_motion_sequence[1])
         return sequence_indices
 
-    def compute_total_energy_change(self, mei_sequence, mhi_sequence):
+    def compute_total_energy_change(
+        self, energy_diff_sequence, mei_sequence, mhi_sequence
+    ):
         """
         computes the sum of the mhi - mei sequence values
         this will inevitably be very large (millions)
         let's reduce the size since precision isn't that important
         will multiply by 0.000000
         """
+        # TODO there's probably some refining to do here
+        # need some better tooling to analyze this
+        # not sure if it makes sense to use energy diff sequence
         total_energy_change = np.sum(
             np.abs(np.subtract(mei_sequence, mhi_sequence))
         ) / len(mei_sequence)
         total_energy_change = total_energy_change * 1e-6
-        print(total_energy_change)
         return total_energy_change
 
     def segment_gestures(
@@ -281,7 +294,9 @@ class GestureSegmenter:
                 np.copy(mhi_volumes[person]), sequence_idxs
             )
 
-            energy = self.compute_total_energy_change(mei_sequence, mhi_sequence)
+            energy = self.compute_total_energy_change(
+                energy_diff_sequence, mei_sequence, mhi_sequence
+            )
             if energy < self.gesture_heuristics["energy_threshold"]:
                 continue
             self.energy_diff_gesture_sequences[person].append(energy_diff_sequence)

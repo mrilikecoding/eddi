@@ -325,11 +325,8 @@ class MotionHistoryImager(PipelineNode):
             MEI_canvases = cv2.resize(MEI_canvases, (self.w * 2, self.h * 2))
             MHI_canvases = cv2.medianBlur(MHI_canvases, 5)
             MEI_canvases = cv2.medianBlur(MEI_canvases, 5)
-            diff_canvases = cv2.medianBlur(
-                np.abs(np.subtract(MEI_canvases, MHI_canvases)), 5
-            )
             canvases = np.concatenate(
-                [MHI_canvases, MEI_canvases, diff_canvases], axis=0
+                [MHI_canvases, MEI_canvases], axis=0
             )
             window_name = "MHI/MEI Canvas"
             cv2.imshow(window_name, canvases)

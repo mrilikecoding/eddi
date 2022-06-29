@@ -7,7 +7,7 @@ class GesturePipelineRunner:
     def __init__(
         self,
         display_gesture_matrices=False,
-        display_captured_gestures=False,
+        display_captured_gestures=True,
         gesture_limit=5,
         gesture_heuristics={},
         frame_window_length=75,
@@ -27,7 +27,7 @@ class GesturePipelineRunner:
         self.gesture_sensitivity = self.gesture_heuristics["gesture_sensitivity"]
 
         # initialize the interface for comparing new gestures with stored gestures
-        self.gesture_comparer = GestureComparer()
+        self.gesture_comparer = GestureComparer(gesture_limit=self.gesture_limit)
 
     def run_cycle(self, energy_moment_delta_volumes, mei_volumes, mhi_volumes):
         # from passed volumes, cut out the best determined sequence
@@ -44,10 +44,25 @@ class GesturePipelineRunner:
                     self.MHI_gesture_sequences,
                     self.global_gesture_sequences,
                 ) = sequences
+                self.gesture_comparer.update_gesture_library(
+                    {
+                        "energy_moment_diff_sequences": self.energy_diff_gesture_sequences,
+                        "mei_sequences": self.MEI_gesture_sequences,
+                        "mhi_sequences": self.MHI_gesture_sequences,
+                        "global_sequences": self.global_gesture_sequences,
+                    }
+                )
             else:
                 if self.display_captured_gestures:
                     self.display_captured_gestures()
-                self.gesture_comparer.ingest_sequences(sequences)
+                self.gesture_comparer.ingest_sequences(
+                    {
+                        "energy_moment_diff_sequence": sequences[0],
+                        "mei_sequence": sequences[1],
+                        "mhi_sequence": sequences[2],
+                        "global_sequence": sequences[3],
+                    }
+                )
 
     def segment_gestures(
         self,
@@ -88,7 +103,8 @@ class GesturePipelineRunner:
         self.current_frame = (self.current_frame + 1) % self.frame_window_length
         # track the number of cycles - this will help make sure
         # we don't tag the same gesture within the same cycle
-        self.current_cycle += 1
+        if self.current_frame == 0:
+            self.current_cycle += 1
 
         return sequences
 
