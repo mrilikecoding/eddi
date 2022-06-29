@@ -12,14 +12,14 @@ global_config = {
         "min_z": 1400,
     },
     "frame_decay": 3,  # how much to decay each frame in motion history
-    "frame_window_length": 50,  # how many frames to keep in memory
+    "frame_window_length": 65,  # how many frames to keep in memory
     "display_gesture_matrices": True,  # visualize similarity / transition matrices from gesture segmenter
     "gesture_limit": 5,  # max number of gestures to maintain for comparison
     "gesture_sensitivity": 0.5,  # aka alpha in gesture segmenter
     "gesture_heuristics": {
-        "gesture_sensitivity": 0.3,
+        "gesture_sensitivity": 0.6,
         "minimum_frame_count": 20,  # min magnitude (frame count) of gesture
-        "maximum_frame_count": 40,  # max magnitude (frame count) of gesture
-        "energy_threshold": 5.0,  # how much energy should a gesture have
+        "maximum_frame_count": 45,  # max magnitude (frame count) of gesture
+        "energy_threshold": 4.5,  # how much energy should a gesture have
     },
 }
