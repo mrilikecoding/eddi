@@ -1,5 +1,6 @@
 from src.gesture_segmenter import GestureSegmenter
 from src.gesture_comparer import GestureComparer
+from src.gesture_aesthetic_sequence_mapper import GestureAestheticSequenceMapper
 from src import utils
 
 
@@ -7,7 +8,7 @@ class GesturePipelineRunner:
     def __init__(
         self,
         display_gesture_matrices=False,
-        display_captured_gestures=True,
+        display_captured_gestures=False,
         gesture_limit=5,
         gesture_heuristics={},
         frame_window_length=75,
@@ -28,41 +29,55 @@ class GesturePipelineRunner:
 
         # initialize the interface for comparing new gestures with stored gestures
         self.gesture_comparer = GestureComparer(gesture_limit=self.gesture_limit)
+        self.gesture_sequence_mapper = GestureAestheticSequenceMapper()
+        # where to store a cycle's output sequence (accessed by #run_cycle caller)
+        self.output = []
 
     def run_cycle(self, energy_moment_delta_volumes, mei_volumes, mhi_volumes):
+        # TODO may want to use this output variable to loop sequences by not
+        # resetting the variable - but would need to figure out length of sequence
+        # in relation to the frame position so we're not layering the sequence on
+        # top of itself
+        self.output = []  # reset the output
         # from passed volumes, cut out the best determined sequence
+        if (
+            len(list(energy_moment_delta_volumes.values())[0])
+            < self.frame_window_length
+        ):
+            return
         sequences = self.segment_gestures(
             energy_moment_delta_volumes,
             mei_volumes,
             mhi_volumes,
         )
+        # if we have a valid gesture sequence
         if sequences is not None:
             if len(self.global_gesture_sequences) < self.gesture_limit:
-                (
-                    self.energy_diff_gesture_sequences,
-                    self.MEI_gesture_sequences,
-                    self.MHI_gesture_sequences,
-                    self.global_gesture_sequences,
-                ) = sequences
+                self.global_gesture_sequences.append(sequences)
+                # update our library of stored gestures
                 self.gesture_comparer.update_gesture_library(
-                    {
-                        "energy_moment_diff_sequences": self.energy_diff_gesture_sequences,
-                        "mei_sequences": self.MEI_gesture_sequences,
-                        "mhi_sequences": self.MHI_gesture_sequences,
-                        "global_sequences": self.global_gesture_sequences,
-                    }
+                    self.global_gesture_sequences
+                )
+                # allow the outputs to react to this gesture
+                self.output = self.gesture_sequence_mapper.map_sequences_to_rgb(
+                    sequences
                 )
             else:
                 if self.display_captured_gestures:
                     self.display_captured_gestures()
-                self.gesture_comparer.ingest_sequences(
-                    {
-                        "energy_moment_diff_sequence": sequences[0],
-                        "mei_sequence": sequences[1],
-                        "mhi_sequence": sequences[2],
-                        "global_sequence": sequences[3],
-                    }
-                )
+                # self.gesture_comparer.ingest_sequences(
+                #     {
+                #         "energy_moment_diff_sequence": sequences[0],
+                #         "mei_sequence": sequences[1],
+                #         "mhi_sequence": sequences[2],
+                #         "global_sequence": sequences[3],
+                #     }
+                # )
+                # TODO when ingesting sequences, we want to get back
+                # a sequence from the comparer that is the most similar
+                # sequence within a threshold and reweight the library
+                # then send that sequence to the sequence mapper and
+                # set the output
 
     def segment_gestures(
         self,
@@ -82,7 +97,7 @@ class GesturePipelineRunner:
             energy_diff_gesture_sequences=self.energy_diff_gesture_sequences,
             MEI_gesture_sequences=self.MEI_gesture_sequences,
             MHI_gesture_sequences=self.MHI_gesture_sequences,
-            global_gesture_sequences=self.global_gesture_sequences,
+            global_gesture_sequences=self.global_gesture_sequences,  # TODO prob don't need this
             energy_moment_delta_volumes=energy_moment_delta_volumes,
             frame_window_length=self.frame_window_length,
             current_frame=self.current_frame,

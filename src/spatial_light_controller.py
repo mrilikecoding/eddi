@@ -57,6 +57,7 @@ class SpatialLightController(Controller):
         self.gesture_pipeline = GesturePipelineRunner(
             frame_window_length=global_config["frame_window_length"],
             display_gesture_matrices=global_config["display_gesture_matrices"],
+            display_captured_gestures=global_config["display_captured_gestures"],
             gesture_limit=global_config["gesture_limit"],
             gesture_heuristics=global_config["gesture_heuristics"],
         )
@@ -93,6 +94,8 @@ class SpatialLightController(Controller):
                 mei_volumes,
                 mhi_volumes,
             )
+            if len(self.gesture_pipeline.output):
+                self.sequencer.add_sequence_to_queue(self.gesture_pipeline.output)
             # TODO get self.gesture_pipeline.output and add to queue
 
     def send_next_frame_values_to_devices(self):

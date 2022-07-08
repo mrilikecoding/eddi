@@ -112,7 +112,9 @@ class GestureSegmenter:
         # this will b5e blocking
         diff_similarity_matrices = np.copy(diff_similarity_matrices)
         diff_similarity_matrices = cv2.resize(diff_similarity_matrices, (300, 300))
-        utils.display_image("MEI/MHI Diff Similarity Matrices", diff_similarity_matrices, wait=False)
+        utils.display_image(
+            "MEI/MHI Diff Similarity Matrices", diff_similarity_matrices, wait=False
+        )
 
     def display_transition_matrices(self):
         matrices = []
@@ -275,6 +277,7 @@ class GestureSegmenter:
         Otherwise, if we have sequence indices, return the sequence as applied to the
         passed volumes
         """
+        sequences = {}
         # make sure we've established our full event cycle before extracting gesture
         if self.current_cycle == 0 or self.current_best_sequence is None:
             return
@@ -299,27 +302,24 @@ class GestureSegmenter:
             )
             if energy < self.gesture_heuristics["energy_threshold"]:
                 continue
-            self.energy_diff_gesture_sequences[person].append(energy_diff_sequence)
-            self.MEI_gesture_sequences[person].append(mei_sequence)
-            self.MHI_gesture_sequences[person].append(mhi_sequence)
-            self.global_gesture_sequences.append(
-                {
-                    "MEI": mei_sequence,
-                    "MHI": mhi_sequence,
-                    "energy_diff": energy_diff_sequence,
-                    "meta": {
-                        "at_frame": self.current_frame,
-                        "at_cycle": self.current_cycle,
-                        "idxs": self.current_best_sequence,
-                        "energy": energy,
-                    },
-                }
-            )
+            # self.energy_diff_gesture_sequences[person].append(energy_diff_sequence)
+            # self.MEI_gesture_sequences[person].append(mei_sequence)
+            # self.MHI_gesture_sequences[person].append(mhi_sequence)
+            sequences = {
+                "MEI": mei_sequence,
+                "MHI": mhi_sequence,
+                "energy_diff": energy_diff_sequence,
+                "meta": {
+                    "at_frame": self.current_frame,
+                    "at_cycle": self.current_cycle,
+                    "idxs": self.current_best_sequence,
+                    "energy": energy,
+                    "person_id": person,
+                },
+            }
             print("Gesture detected!")
 
-        return (
-            self.energy_diff_gesture_sequences,
-            self.MEI_gesture_sequences,
-            self.MHI_gesture_sequences,
-            self.global_gesture_sequences,
-        )
+        # if we have sequences, return them, otherwise return None
+        if sequences:
+            # TODO will this work
+            return sequences
