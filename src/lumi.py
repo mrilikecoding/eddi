@@ -18,7 +18,9 @@ class Lumi:
         self.output_registry = {}
         self.input_registry = {}
         self.input_dispatcher = dispatcher.Dispatcher()
-        self.light_controller = SpatialLightController()
+        self.light_controller = SpatialLightController(
+            send_channel_message=self.send_channel_message
+        )
         self.time = 0  # for sequencing - incremented in #update
 
     def register_output_device(self, device):
@@ -92,20 +94,23 @@ class Lumi:
         self.blackout()  # let's turn off the lights on the way out
         transport.close()  # Clean up serve endpoint
 
+    def update(self):
+        """
+        This runs each loop - it calls the update outputs function and increments a timer
+        """
+        # TODO
+        self.light_controller.update_queue_position(self.time)
+        self.update_output_devices_from_queue()
+        self.time += 1
+
+    def update_output_devices_from_queue(self):
+        self.update_output_devices()
+
     def update_output_devices(self):
+        """
+        This runs each loop
+        """
         for _, device in self.input_registry.items():
             self.light_controller.process_input_device_values(device)
 
-        # TODO implemented sequencing
-        for _, device in self.output_registry.items():
-            r = device.get_value("r")
-            g = device.get_value("g")
-            b = device.get_value("b")
-            # TODO figure out other channels
-            self.send_channel_message(device.name, "r", r)
-            self.send_channel_message(device.name, "g", g)
-            self.send_channel_message(device.name, "b", b)
-
-    def update(self):
-        self.update_output_devices()
-        self.time += 1
+        self.light_controller.send_next_frame_values_to_devices()

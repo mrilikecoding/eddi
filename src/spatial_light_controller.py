@@ -1,26 +1,48 @@
+import json
+
 from global_config import global_config
 from src.controller import Controller
 from src.fuzzy_joint_tracker import FuzzyJointTracker
 from src.mhi import MotionHistoryImager
 from src.gesture_pipeline_runner import GesturePipelineRunner
-
+from src.sequencer import Sequencer
 
 # TODO rename this class - maybe something like IOPipeline
 class SpatialLightController(Controller):
-    def __init__(self, output_devices={}):
+    def __init__(self, send_channel_message, output_devices={}):
+
+        # TODO this is repeated a few places - DRY up
+        self.spatial_categories = [
+            "left",
+            "right",
+            "top",
+            "bottom",
+            "back",
+            "front",
+            "middle",
+        ]
+        self.primary_axis = ["left", "right"]
 
         self.output_devices = output_devices
+        # from config file, map generic spatial assignments for each instrument
+        # to a dictionary keyed off attribute
+        self.attr_indexed_output_devices = {}
+        try:
+            f = open("spatial_device_configuration.json")
+            device_config = json.load(f)
+            f.close()
+            self.device_config = device_config
+        except Exception as e:
+            print("No device config file found", e)
 
         # Init processing pipeline node instances
         self.fuzzy_tracker = FuzzyJointTracker(
             min_max_dimensions=global_config["space_min_max_dimensions"],
         )
 
-        # self.display_gesture_matrices = True
-        self.MEI_gesture_sequences = {}
-        self.MHI_gesture_sequences = {}
-        self.energy_diff_gesture_sequences = {}
-        self.global_gesture_sequences = []
+        # Sequencer Initialization
+        self.send_channel_message = send_channel_message
+        self.sequencer = Sequencer()
 
         # Motion Imaging Initialization
         # track global input image state in this class
@@ -44,12 +66,18 @@ class SpatialLightController(Controller):
             self.motion_history_imager,
         ]
 
+    # TODO not sure if this is needed
+    def update_queue_position(self, queue_position):
+        self.queue_position = queue_position
+
     def process_input_device_values(self, input_object_instance):
         """
         This is the main event loop function
         """
         for node in self.input_processing_pipeline:
             node.process_input_device_values(input_object_instance)
+            if len(node.output):
+                self.sequencer.add_sequence_to_queue(node.output)
 
         # motion history imager processes volume of mei and mhi images as well as their diff
         # NOTE - these volumes operate as a FIFO array of images of length frame_window_length
@@ -65,6 +93,24 @@ class SpatialLightController(Controller):
                 mei_volumes,
                 mhi_volumes,
             )
+            # TODO get self.gesture_pipeline.output and add to queue
+
+    def send_next_frame_values_to_devices(self):
+        # get the next column of values in queue
+        # average all corresponding outputs
+        # send message
+        spatial_map_values = self.sequencer.get_next_values()
+        if not spatial_map_values:
+            return
+        self.set_spatial_map_values(spatial_map_values)
+        for _, device in self.output_devices.items():
+            r = device.get_value("r")
+            g = device.get_value("g")
+            b = device.get_value("b")
+            # TODO figure out other channels
+            self.send_channel_message(device.name, "r", r)
+            self.send_channel_message(device.name, "g", g)
+            self.send_channel_message(device.name, "b", b)
 
     def set_output_devices(self, output_devices):
         """
@@ -80,6 +126,47 @@ class SpatialLightController(Controller):
         processing loop
         """
         self.output_devices = output_devices
-        for node in self.input_processing_pipeline:
-            node.set_output_devices(self.output_devices)
-            node.index_output_devices_by_config_attribute()
+        self.index_output_devices_by_config_attribute()
+
+    def index_output_devices_by_config_attribute(self):
+        for device in self.output_devices.keys():
+            config = self.device_config[device]
+            for k, v in config.items():
+                if (
+                    k in self.spatial_categories
+                    and k in self.attr_indexed_output_devices
+                ):
+                    if v == True:
+                        self.attr_indexed_output_devices[k].append(device)
+                else:
+                    if v == True:
+                        self.attr_indexed_output_devices[k] = [device]
+
+    def set_spatial_map_values(self, spatial_map_values):
+        """
+        The primary axis is a carrier and is modified by other axes
+        """
+        if not spatial_map_values:
+            return
+
+        for location in self.primary_axis:
+            for d in self.attr_indexed_output_devices[location]:
+                value = spatial_map_values[location]
+                self.output_devices[d].set_value("r", value[0])
+                self.output_devices[d].set_value("g", value[1])
+                self.output_devices[d].set_value("b", value[2])
+
+        for location in self.spatial_categories:
+            if location in self.primary_axis:
+                continue
+            value = spatial_map_values[location]
+            for d in self.attr_indexed_output_devices[location]:
+                r = self.output_devices[d].get_value("r")
+                g = self.output_devices[d].get_value("g")
+                b = self.output_devices[d].get_value("b")
+                r = r * value[0]
+                g = g * value[1]
+                b = b * value[2]
+                self.output_devices[d].set_value("r", r)
+                self.output_devices[d].set_value("g", g)
+                self.output_devices[d].set_value("b", b)
