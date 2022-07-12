@@ -49,10 +49,8 @@ class GestureAestheticSequenceMapper:
         """Return middle vertical of sequence"""
         return np.copy(sequence[:, int(h / 3) : int(2 * (h / 3)), :])
 
-    def compute_normalized_sequence_section_mean(self, sequence):
-        return [
-            self.normalize_point(np.mean(frame), 0, 255, 0, 1) for frame in sequence
-        ]
+    def compute_sequence_section_mean(self, sequence):
+        return [np.mean(frame) for frame in sequence]
 
     def map_sequences_to_rgb(self, sequences):
         """
@@ -82,6 +80,7 @@ class GestureAestheticSequenceMapper:
         maybe use the energymei
         """
         frame_count, h, w = sequences["MEI"].shape
+        energy_diff = sequences["energy_diff"]
         mhi = sequences["MHI"]
         mhi_top = self.slice_top(mhi, h)
         mhi_bottom = self.slice_bottom(mhi, h)
@@ -97,16 +96,22 @@ class GestureAestheticSequenceMapper:
         }
 
         partition_mean_sequences = {
-            key: self.compute_normalized_sequence_section_mean(partition)
-            for key, partition in partitions
+            key: self.compute_sequence_section_mean(partition)
+            for key, partition in partitions.items()
         }
 
         spatial_sequence_frames = []
         for i in range(frame_count):
             spatial_sequence_frames.append(
                 {
-                    position: (sequence[i], sequence[i], sequence[i])
-                    for position, sequence in partition_mean_sequences
+                    position: (
+                        self.normalize_point(sequence[i], 0, 255, 0, 1),
+                        0.01,
+                        # self.normalize_point(sequence[i], 0, 255, 0, 1),
+                        0.01
+                        # self.normalize_point(sequence[i], 0, 255, 0, 1),
+                    )
+                    for position, sequence in partition_mean_sequences.items()
                 }
             )
         # TODO what to do with RGB
