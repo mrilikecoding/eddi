@@ -1,3 +1,5 @@
+import numpy as np
+
 from src.gesture_segmenter import GestureSegmenter
 from src.gesture_comparer import GestureComparer
 from src.gesture_aesthetic_sequence_mapper import GestureAestheticSequenceMapper
@@ -22,10 +24,16 @@ class GesturePipelineRunner:
         self.gesture_heuristics = gesture_heuristics
         self.current_frame = 0
         self.current_cycle = 0
+        self.alt_cycle_1 = 0
+        self.alt_cycle_2 = 0
         self.gesture_limit_reached = False
         self.display_gesture_matrices = display_gesture_matrices
         self.frame_window_length = frame_window_length
         self.gesture_sensitivity = self.gesture_heuristics["gesture_sensitivity"]
+        # keeping 3 sequences within proximity of each other to vote on
+        self.current_cycle_sequence_1 = None
+        self.current_cycle_sequence_2 = None
+        self.current_cycle_sequence_3 = None
 
         # initialize the interface for comparing new gestures with stored gestures
         self.gesture_comparer = GestureComparer(gesture_limit=self.gesture_limit)
@@ -50,9 +58,56 @@ class GesturePipelineRunner:
             mei_volumes,
             mhi_volumes,
         )
+
+        # TODO - try investigating diff in standard deviation
+        # [(np.std(s['MEI']), np.std(s['MHI'])) for s in self.global_gesture_sequences]
+        # For example:
+        # (74.2569363682991, 101.03913215004903) - Better gesture
+        # (62.647375294280025, 92.60295603239565) - Better gesture
+        # (69.97907209297676, 77.4157758742946) - Bad gesture
+        # (60.72376924833079, 101.06151798739978) - Better gesture
+        # (68.41915553867938, 86.2812660323224) - Bad gesture
+
+        # update the frame position within the frame window
+        # this is useful for not selecting the same gesture
+        # over and over again within a window
+        self.current_frame = (self.current_frame + 1) % self.frame_window_length
+        # track the number of cycles - this will help make sure
+        # we don't tag the same gesture within the same cycle
+        if self.current_frame == 0:
+            print("subcycle 1")
+            self.current_cycle_sequence_1 = sequences
+            self.current_cycle += 1
+        if self.current_frame // 3 == 0:
+            print("subcycle 2")
+            self.current_cycle_sequence_2 = sequences
+            self.alt_cycle_1 += 1
+        if (self.current_frame // 3) * 2 == 0:
+            print("subcycle 3")
+            self.current_cycle_sequence_3 = sequences
+            self.alt_cycle_2 += 1
+
+        if (
+            self.current_cycle_sequence_1
+            and self.current_cycle_sequence_2
+            and self.current_cycle_sequence_3
+        ):
+            sequences = self.compute_best_sequences()
+        else:
+            return
+
         # if we have a valid gesture sequence
-        if sequences is not None:
+        if sequences is not None and not any(
+            [
+                stored_sequences["meta"]["energy"] == sequences["meta"]["energy"]
+                for stored_sequences in self.global_gesture_sequences
+            ]
+        ):
+            self.current_cycle_sequence_1 = None
+            self.current_cycle_sequence_2 = None
+            self.current_cycle_sequence_3 = None
             if len(self.global_gesture_sequences) < self.gesture_limit:
+                # if True:
                 self.global_gesture_sequences.append(sequences)
                 # update our library of stored gestures
                 self.gesture_comparer.update_gesture_library(
@@ -65,19 +120,35 @@ class GesturePipelineRunner:
             else:
                 if self.display_captured_gestures:
                     self.display_captured_gestures()
-                # self.gesture_comparer.ingest_sequences(
-                #     {
-                #         "energy_moment_diff_sequence": sequences[0],
-                #         "mei_sequence": sequences[1],
-                #         "mhi_sequence": sequences[2],
-                #         "global_sequence": sequences[3],
-                #     }
-                # )
-                # TODO when ingesting sequences, we want to get back
-                # a sequence from the comparer that is the most similar
-                # sequence within a threshold and reweight the library
-                # then send that sequence to the sequence mapper and
-                # set the output
+            # self.gesture_comparer.ingest_sequences(
+            #     {
+            #         "energy_moment_diff_sequence": sequences[0],
+            #         "mei_sequence": sequences[1],
+            #         "mhi_sequence": sequences[2],
+            #         "global_sequence": sequences[3],
+            #     }
+            # )
+            # TODO when ingesting sequences, we want to get back
+            # a sequence from the comparer that is the most similar
+            # sequence within a threshold and reweight the library
+            # then send that sequence to the sequence mapper and
+            # set the output
+
+    def compute_best_sequences(self):
+        if (
+            self.current_cycle_sequence_1["meta"]["energy"]
+            == self.current_cycle_sequence_2["meta"]["energy"]
+            == self.current_cycle_sequence_3["meta"]["energy"]
+        ):
+            return self.current_cycle_sequence_1
+        else:
+            candidates = [
+                self.current_cycle_sequence_1["meta"]["energy"],
+                self.current_cycle_sequence_2["meta"]["energy"],
+                self.current_cycle_sequence_3["meta"]["energy"],
+            ]
+            best_energy = np.argmax(candidates)
+            return candidates[best_energy]
 
     def segment_gestures(
         self,
@@ -111,15 +182,6 @@ class GesturePipelineRunner:
             mei_volumes,
             mhi_volumes,
         )
-
-        # update the frame position within the frame window
-        # this is useful for not selecting the same gesture
-        # over and over again within a window
-        self.current_frame = (self.current_frame + 1) % self.frame_window_length
-        # track the number of cycles - this will help make sure
-        # we don't tag the same gesture within the same cycle
-        if self.current_frame == 0:
-            self.current_cycle += 1
 
         return sequences
 
