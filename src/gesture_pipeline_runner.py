@@ -14,6 +14,7 @@ class GesturePipelineRunner:
         gesture_limit=5,
         gesture_heuristics={},
         frame_window_length=75,
+        display_info=False,
     ):
         self.display_capture_gestures = display_captured_gestures
         self.energy_diff_gesture_sequences = {}
@@ -35,6 +36,9 @@ class GesturePipelineRunner:
         self.current_cycle_sequence_2 = None
         self.current_cycle_sequence_3 = None
 
+        self.display_info = display_info
+        self.info_window = np.zeros((200, 500))
+
         # initialize the interface for comparing new gestures with stored gestures
         self.gesture_comparer = GestureComparer(gesture_limit=self.gesture_limit)
         self.gesture_sequence_mapper = GestureAestheticSequenceMapper()
@@ -46,6 +50,42 @@ class GesturePipelineRunner:
         # resetting the variable - but would need to figure out length of sequence
         # in relation to the frame position so we're not layering the sequence on
         # top of itself
+
+        # update the frame position within the frame window
+        # this is useful for not selecting the same gesture
+        # over and over again within a window
+        self.current_frame = self.current_frame % self.frame_window_length
+        # track the number of cycles - this will help make sure
+        # we don't tag the same gesture within the same cycle
+        if self.current_frame == 0:
+            self.current_cycle += 1
+        if int(self.current_frame / 3) == 0:
+            self.alt_cycle_1 += 1
+        if int(self.current_frame / 3) * 2 == 0:
+            self.alt_cycle_2 += 1
+
+        if energy_moment_delta_volumes and mei_volumes and mhi_volumes:
+            self.process_volumes(energy_moment_delta_volumes, mei_volumes, mhi_volumes)
+
+        if self.display_info:
+            self.display_info_window()
+
+        self.current_frame += 1
+
+    def display_info_window(self):
+        info_window = np.copy(self.info_window)
+        utils.put_text(
+            info_window,
+            {
+                "current_cycle_1": self.current_cycle,
+                "alt_cycle_1": self.alt_cycle_1,
+                "alt_cycle_2": self.alt_cycle_2,
+            },
+            (20, 20),
+        )
+        utils.display_image("Gesture Pipeline Info", info_window)
+
+    def process_volumes(self, energy_moment_delta_volumes, mei_volumes, mhi_volumes):
         self.output = []  # reset the output
         # from passed volumes, cut out the best determined sequence
         if (
@@ -53,11 +93,6 @@ class GesturePipelineRunner:
             < self.frame_window_length
         ):
             return
-        sequences = self.segment_gestures(
-            energy_moment_delta_volumes,
-            mei_volumes,
-            mhi_volumes,
-        )
 
         # TODO - try investigating diff in standard deviation
         # [(np.std(s['MEI']), np.std(s['MHI'])) for s in self.global_gesture_sequences]
@@ -68,24 +103,19 @@ class GesturePipelineRunner:
         # (60.72376924833079, 101.06151798739978) - Better gesture
         # (68.41915553867938, 86.2812660323224) - Bad gesture
 
-        # update the frame position within the frame window
-        # this is useful for not selecting the same gesture
-        # over and over again within a window
-        self.current_frame = (self.current_frame + 1) % self.frame_window_length
-        # track the number of cycles - this will help make sure
-        # we don't tag the same gesture within the same cycle
+        # TODO this is not working
+        sequences = self.segment_gestures(
+            energy_moment_delta_volumes,
+            mei_volumes,
+            mhi_volumes,
+            self.current_cycle,
+        )
         if self.current_frame == 0:
-            print("subcycle 1")
             self.current_cycle_sequence_1 = sequences
-            self.current_cycle += 1
-        if self.current_frame // 3 == 0:
-            print("subcycle 2")
+        if int(self.current_frame / 3) == 0:
             self.current_cycle_sequence_2 = sequences
-            self.alt_cycle_1 += 1
-        if (self.current_frame // 3) * 2 == 0:
-            print("subcycle 3")
+        if int(self.current_frame / 3) * 2 == 0:
             self.current_cycle_sequence_3 = sequences
-            self.alt_cycle_2 += 1
 
         if (
             self.current_cycle_sequence_1
@@ -97,29 +127,24 @@ class GesturePipelineRunner:
             return
 
         # if we have a valid gesture sequence
-        if sequences is not None and not any(
-            [
-                stored_sequences["meta"]["energy"] == sequences["meta"]["energy"]
-                for stored_sequences in self.global_gesture_sequences
-            ]
-        ):
+        if sequences is not None:
             self.current_cycle_sequence_1 = None
             self.current_cycle_sequence_2 = None
             self.current_cycle_sequence_3 = None
-            if len(self.global_gesture_sequences) < self.gesture_limit:
-                # if True:
+            # if len(self.global_gesture_sequences) < self.gesture_limit:
+            if True:
                 self.global_gesture_sequences.append(sequences)
                 # update our library of stored gestures
-                self.gesture_comparer.update_gesture_library(
-                    self.global_gesture_sequences
-                )
+                # self.gesture_comparer.update_gesture_library(
+                #     self.global_gesture_sequences
+                # )
                 # allow the outputs to react to this gesture
                 self.output = self.gesture_sequence_mapper.map_sequences_to_rgb(
                     sequences
                 )
-            else:
-                if self.display_captured_gestures:
-                    self.display_captured_gestures()
+            # else:
+            #     if self.display_captured_gestures:
+            #         self.display_captured_gestures()
             # self.gesture_comparer.ingest_sequences(
             #     {
             #         "energy_moment_diff_sequence": sequences[0],
@@ -151,10 +176,7 @@ class GesturePipelineRunner:
             return candidates[best_energy]
 
     def segment_gestures(
-        self,
-        energy_moment_delta_volumes,
-        mei_volumes,
-        mhi_volumes,
+        self, energy_moment_delta_volumes, mei_volumes, mhi_volumes, cycle
     ):
         """
         Outputs updated gesture sequences based on the
@@ -172,7 +194,7 @@ class GesturePipelineRunner:
             energy_moment_delta_volumes=energy_moment_delta_volumes,
             frame_window_length=self.frame_window_length,
             current_frame=self.current_frame,
-            current_cycle=self.current_cycle,
+            current_cycle=cycle,
             alpha=self.gesture_sensitivity,
             display=self.display_gesture_matrices,
             gesture_heuristics=self.gesture_heuristics,
@@ -208,4 +230,4 @@ class GesturePipelineRunner:
                     color=(255, 0, 255),
                     convert_image_color=True,
                 )
-                utils.display_image("Gesture", frame, top=True, wait=True)
+                utils.display_image("Gesture", frame, top=True, wait=0)

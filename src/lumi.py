@@ -99,7 +99,6 @@ class Lumi:
         This runs each loop - it calls the update outputs function and increments a timer
         """
         # TODO
-        self.light_controller.update_queue_position(self.time)
         self.update_output_devices_from_queue()
         self.time += 1
 

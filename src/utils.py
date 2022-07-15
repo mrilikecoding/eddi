@@ -1,13 +1,52 @@
-from curses import window
 import cv2
+import numpy as np
 
 
-def display_image(window_name, img, top=True, wait=False):
+def display_image(
+    window_name,
+    img,
+    resize=(-1, -1),
+    normalize=False,
+    input_range=(None, None),
+    top=True,
+    wait=-1,
+    event_func=None,
+    event_params={},
+    text=None,
+    text_params=None,
+):
+    img = np.copy(img)
+    if resize[0] >= 0 and resize[1] >= 0:
+        img = cv2.resize(img, (resize[0], resize[1]))
+    if normalize:
+        if input_range[0] and input_range[1]:
+            cv2.normalize(
+                img,
+                img,
+                input_range[0],
+                input_range[1],
+                cv2.NORM_MINMAX,
+            )
+        else:
+            cv2.normalize(img, img, cv2.NORM_MINMAX)
+
+    if text:
+        img = put_text(
+            img, text, position=text_params["pos"], color=text_params["color"]
+        )
+
     cv2.imshow(window_name, img)
     if top:
         cv2.setWindowProperty(window_name, cv2.WND_PROP_TOPMOST, 1)
-    if wait:
-        cv2.waitKey(0)
+    if wait >= 0:
+        k = cv2.waitKey(wait)
+        if k == 27:
+            cv2.destroyAllWindows()
+        elif event_func:
+            if k == ord("m"):
+                event_func(event_params)
+        else:
+            cv2.destroyAllWindows()
 
 
 def put_text(
@@ -22,10 +61,11 @@ def put_text(
 ):
     """return image"""
     if convert_image_color and len(color) == 3:
+        img = img.astype(np.uint8)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     img = cv2.putText(
         img,
-        text,
+        str(text),
         position,
         fontFace=font,
         fontScale=fontscale,
@@ -33,3 +73,16 @@ def put_text(
         thickness=thickness,
     )
     return img
+
+
+def normalize_point(x, min_x, max_x, min_target, max_target, return_boundary=False):
+    # sometimes we may want to ignore extremes rather than
+    # altering their value
+    if return_boundary:
+        if x > max_x:
+            x = max_x
+        if x < min_x:
+            x = min_x
+
+    x_norm = ((x - min_x) / (max_x - min_x)) * (max_target - min_target)
+    return x_norm

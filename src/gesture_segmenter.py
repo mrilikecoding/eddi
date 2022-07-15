@@ -1,8 +1,10 @@
 import math
+import time
 import cv2
 import numpy as np
 import scipy.signal
 from src import utils
+from global_config import global_config
 
 
 class GestureSegmenter:
@@ -56,16 +58,42 @@ class GestureSegmenter:
                 self.transition_matrices[key] = self.compute_transition_matrix(
                     self.similarity_matrices[key]
                 )
-                sequence = self.find_motion(
+                sequence_idxs = self.find_motion_sequences(
                     transition_matrix=self.transition_matrices[key],
                     alpha=self.alpha,
                 )
-                if sequence is not None:
-                    self.current_best_sequence[key] = sequence
+                if sequence_idxs is not None:
+                    self.current_best_sequence[key] = sequence_idxs
 
         if self.display and self.similarity_matrices and self.transition_matrices:
             # self.display_similarity_matrices()
             self.display_transition_matrices()
+
+    def run_validations(self, sequence_idxs, energy):
+        if (
+            self.valid_gesture_cycle()
+            and self.valid_magnitude(sequence_idxs)
+            and self.valid_energy(energy)
+            and self.valid_unique_energy(energy)
+        ):
+            return True
+        return False
+
+    def valid_energy(self, energy):
+        return (
+            self.gesture_heuristics["min_energy_threshold"]
+            < energy
+            < self.gesture_heuristics["max_energy_threshold"]
+        )
+    
+    def valid_unique_energy(self, energy):
+        """
+        return false if the energy exactly matches any stored sequences
+        """
+        return not any([
+            stored_sequences["meta"]["energy"] == energy
+            for stored_sequences in self.global_gesture_sequences
+        ])
 
     def valid_magnitude(self, idxs):
         """
@@ -78,7 +106,7 @@ class GestureSegmenter:
 
     def valid_gesture_cycle(self):
         """
-        return false if any stored previously stored gestures have come from this cycle
+        return false if any previously stored gestures have come from this cycle
         """
         return not any(
             [
@@ -86,11 +114,6 @@ class GestureSegmenter:
                 for sequence in self.global_gesture_sequences
             ]
         )
-
-    def find_motion(self, transition_matrix, alpha=0.5):
-        best_sequence_idxs = self.find_motion_sequences(transition_matrix, alpha)
-        if self.valid_gesture_cycle() and self.valid_magnitude(best_sequence_idxs):
-            return best_sequence_idxs
 
     def compute_similarity_matrix(self, volume):
         similarity_matrix = np.zeros((self.tau, self.tau))
@@ -113,7 +136,7 @@ class GestureSegmenter:
         diff_similarity_matrices = np.copy(diff_similarity_matrices)
         diff_similarity_matrices = cv2.resize(diff_similarity_matrices, (300, 300))
         utils.display_image(
-            "MEI/MHI Diff Similarity Matrices", diff_similarity_matrices, wait=False
+            "MEI/MHI Diff Similarity Matrices", diff_similarity_matrices
         )
 
     def display_transition_matrices(self):
@@ -149,7 +172,7 @@ class GestureSegmenter:
             (10, 100),
             (255, 0, 255),
         )
-        utils.display_image("Transition Matrices", transition_matrices, wait=False)
+        utils.display_image("Transition Matrices", transition_matrices)
 
     def extract_frame_sequence(self, volume, start_end_idxs):
         volume = np.copy(volume)
@@ -198,7 +221,7 @@ class GestureSegmenter:
         )
         return transition_matrix
 
-    def find_motion_sequences(self, transition_matrix, alpha):
+    def find_motion_sequences(self, transition_matrix, alpha=0.5):
         """Find the longest and smoothest loop for the given difference matrix.
 
         For each cell (i, j) in the transition differences matrix, find the
@@ -246,9 +269,7 @@ class GestureSegmenter:
         sequence_indices = (biggest_motion_sequence[0], biggest_motion_sequence[1])
         return sequence_indices
 
-    def compute_total_energy_change(
-        self, energy_diff_sequence, mei_sequence, mhi_sequence
-    ):
+    def compute_total_energy_change(self, gesture_transition_matrix):
         """
         computes the sum of the mhi - mei sequence values
         this will inevitably be very large (millions)
@@ -258,9 +279,7 @@ class GestureSegmenter:
         # TODO there's probably some refining to do here
         # need some better tooling to analyze this
         # not sure if it makes sense to use energy diff sequence
-        total_energy_change = np.sum(
-            np.abs(np.subtract(mei_sequence, mhi_sequence))
-        ) / len(mei_sequence)
+        total_energy_change = np.sum(gesture_transition_matrix)
         total_energy_change = total_energy_change * 1e-6
         return total_energy_change
 
@@ -296,23 +315,42 @@ class GestureSegmenter:
             mhi_sequence = self.extract_frame_sequence(
                 np.copy(mhi_volumes[person]), sequence_idxs
             )
-
-            energy = self.compute_total_energy_change(
-                energy_diff_sequence, mei_sequence, mhi_sequence
-            )
-            if energy < self.gesture_heuristics["energy_threshold"]:
-                continue
-            # self.energy_diff_gesture_sequences[person].append(energy_diff_sequence)
-            # self.MEI_gesture_sequences[person].append(mei_sequence)
-            # self.MHI_gesture_sequences[person].append(mhi_sequence)
+            start, end = self.current_best_sequence[person]
+            gesture_energy_matrix = self.transition_matrices[person][
+                start:end, start:end
+            ]
+            gesture_energy_matrix = (255 - gesture_energy_matrix).astype(np.uint8)
+            energy = self.compute_total_energy_change(gesture_energy_matrix)
+            if not self.run_validations(sequence_idxs, energy):
+                return
+            if global_config["train_gesture_segmenter"]:
+                utils.display_image(
+                    "Energy Matrix",
+                    gesture_energy_matrix,
+                    normalize=True,
+                    input_range=(
+                        np.min(gesture_energy_matrix),
+                        np.max(gesture_energy_matrix),
+                    ),
+                    resize=(300, 300),
+                    text=f"e={np.round(energy, 4)} l={end-start}, c={self.current_cycle}",
+                    text_params={"pos": (20, 20), "color": 0},
+                    event_func=gesture_explorer_handler,
+                    event_params={
+                        "sequence": mei_sequence,
+                        "energy_matrix": gesture_energy_matrix,
+                    },
+                    wait=0,
+                )
             sequences = {
                 "MEI": mei_sequence,
                 "MHI": mhi_sequence,
                 "energy_diff": energy_diff_sequence,
+                "gesture_energy_matrix": gesture_energy_matrix,
                 "meta": {
                     "at_frame": self.current_frame,
                     "at_cycle": self.current_cycle,
-                    "idxs": self.current_best_sequence,
+                    "idxs": self.current_best_sequence[person],
                     "energy": energy,
                     "person_id": person,
                 },
@@ -323,3 +361,33 @@ class GestureSegmenter:
         if sequences:
             # TODO will this work
             return sequences
+
+
+# for now putting this outside class to make event handler stuff easier
+def gesture_explorer_handler(params):
+    print("Viewing gesture")
+    sequence = params["sequence"]
+    for i, s in enumerate(sequence):
+        s = np.copy(s)
+        display_frame = utils.put_text(s, f"{i}/{len(sequence)}", (15, 15))
+        cv2.imshow("Sequence", display_frame)
+        k = cv2.waitKey(0)
+        training_path = "training/"
+        if k == ord("n"):
+            id = time.time()
+            print("Negative")
+            cv2.imwrite(
+                f"training/negative/neg_energy-{id}.jpg", params["energy_matrix"]
+            )
+            with open(f"training/negative/pos_mhi_sequence-{id}.npy", "wb") as f:
+                np.save(f, sequence)
+
+        if k == ord("p"):
+            id = time.time()
+            print("Positive")
+            cv2.imwrite(
+                f"training/positive/pos_energy-{id}.jpg", params["energy_matrix"]
+            )
+            with open(f"training/positive/neg_mhi_sequence-{id}.npy", "wb") as f:
+                np.save(f, sequence)
+    return True

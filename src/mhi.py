@@ -15,7 +15,9 @@ class MotionHistoryImager(PipelineNode):
     a volume of Hu Moments
     """
 
-    def __init__(self, min_max_dimensions, frame_window_length, frame_decay):
+    def __init__(
+        self, min_max_dimensions, frame_window_length, frame_decay, display_canvas=False
+    ):
         self.input_joint_list = []
         # for normalizing constants
         self.min_x = min_max_dimensions["min_x"]
@@ -25,6 +27,7 @@ class MotionHistoryImager(PipelineNode):
         self.min_z = min_max_dimensions["min_z"]
         self.max_z = min_max_dimensions["max_z"]
 
+        self.display_canvas = display_canvas
         # set each MHI canvas's dimensions
         self.w = int(min_max_dimensions["max_x"] - min_max_dimensions["min_x"])
         self.h = int(min_max_dimensions["max_y"] - min_max_dimensions["min_y"])
@@ -97,8 +100,8 @@ class MotionHistoryImager(PipelineNode):
             self.input_joint_list = input_object_instance.joint_list
 
         self.process_data_frame(input_object_instance)
-        # TODO make display conditional
-        self.display_canvases()
+        if self.display_canvas:
+            self.display_canvases()
         # self.display_info_window()
         self.energy_moment_delta_volumes = self.process_output_matrices()
 
@@ -356,8 +359,10 @@ class MotionHistoryImager(PipelineNode):
                 MEI_canvases = np.concatenate(list(self.MEI_canvases.values()), axis=1)
             MHI_canvases = cv2.resize(MHI_canvases, (self.w * 2, self.h * 2))
             MEI_canvases = cv2.resize(MEI_canvases, (self.w * 2, self.h * 2))
-            canvases = np.concatenate([MHI_canvases, MEI_canvases], axis=0)
-            window_name = "MHI/MEI Canvas"
+            # Not super usefule to see the MEI, so commenting out for now
+            # canvases = np.concatenate([MHI_canvases, MEI_canvases], axis=0)
+            canvases = MHI_canvases
+            window_name = "MHI Canvas"
             cv2.imshow(window_name, canvases)
             cv2.setWindowProperty(window_name, cv2.WND_PROP_TOPMOST, 1)
             cv2.waitKey(1)
