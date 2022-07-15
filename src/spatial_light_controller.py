@@ -7,7 +7,7 @@ from src.mhi import MotionHistoryImager
 from src.gesture_pipeline_runner import GesturePipelineRunner
 from src.sequencer import Sequencer
 
-# TODO rename this class - maybe something like IOPipeline
+
 class SpatialLightController(Controller):
     def __init__(self, send_channel_message, output_devices={}):
 
@@ -50,6 +50,7 @@ class SpatialLightController(Controller):
             min_max_dimensions=global_config["space_min_max_dimensions"],
             frame_window_length=global_config["frame_window_length"],
             frame_decay=global_config["frame_decay"],
+            display_canvas=global_config["display_mhi_canvas"],
         )
 
         # Gesture Pipeline Initialization
@@ -67,13 +68,15 @@ class SpatialLightController(Controller):
             self.motion_history_imager,
         ]
 
-    # TODO not sure if this is needed
-    def update_queue_position(self, queue_position):
-        self.queue_position = queue_position
-
     def process_input_device_values(self, input_object_instance):
         """
         This is the main event loop function
+        All inputs are processed here via defined pipelines
+        And input or processing node instance that needs to
+        affect the output should keep an output array that will
+        be sent to the sequencer. This function is called by the client
+        to start the process. Then the client calls the #send_next_frame_values_to_devices
+        to pull values off the sequencer and send to the output devices
         """
         for node in self.input_processing_pipeline:
             node.process_input_device_values(input_object_instance)
@@ -88,15 +91,13 @@ class SpatialLightController(Controller):
         )
         mei_volumes = self.motion_history_imager.MEI_volumes
         mhi_volumes = self.motion_history_imager.MHI_volumes
-        if energy_moment_delta_volumes and mei_volumes and mhi_volumes:
-            self.gesture_pipeline.run_cycle(
-                energy_moment_delta_volumes,
-                mei_volumes,
-                mhi_volumes,
-            )
-            if len(self.gesture_pipeline.output):
-                self.sequencer.add_sequence_to_queue(self.gesture_pipeline.output)
-            # TODO get self.gesture_pipeline.output and add to queue
+        self.gesture_pipeline.run_cycle(
+            energy_moment_delta_volumes,
+            mei_volumes,
+            mhi_volumes,
+        )
+        if len(self.gesture_pipeline.output):
+            self.sequencer.add_sequence_to_queue(self.gesture_pipeline.output)
 
     def send_next_frame_values_to_devices(self):
         # get the next column of values in queue
