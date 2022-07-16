@@ -22,8 +22,8 @@ global_config = {
     "gesture_heuristics": {
         "gesture_sensitivity": 0.5,  # how much to smoothe out the transition matrices
         "minimum_frame_count": 20,  # min magnitude (frame count) of gesture
-        "maximum_frame_count": 40,  # max magnitude (frame count) of gesture
+        "maximum_frame_count": 50,  # max magnitude (frame count) of gesture
         "min_energy_threshold": 0.2,  # how much energy should a gesture have
-        "max_energy_threshold": 0.8,  # upper bound of gesture energy
+        "max_energy_threshold": 0.9,  # upper bound of gesture energy
     },
 }

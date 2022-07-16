@@ -23,6 +23,7 @@ class GestureSegmenter:
         frame_window_length=75,
         current_frame=0,
         current_cycle=0,
+        cycle_name="primary",
         alpha=0.5,
         display=True,
         gesture_heuristics={},
@@ -32,6 +33,7 @@ class GestureSegmenter:
         self.tau = frame_window_length
         self.current_frame = current_frame
         self.current_cycle = current_cycle
+        self.cycle_name = cycle_name
         self.volumes = energy_moment_delta_volumes
         # Alpha is a scaling factor.
         # The size of the loop and the transition cost are likely to be in very different units,
@@ -85,15 +87,17 @@ class GestureSegmenter:
             < energy
             < self.gesture_heuristics["max_energy_threshold"]
         )
-    
+
     def valid_unique_energy(self, energy):
         """
         return false if the energy exactly matches any stored sequences
         """
-        return not any([
-            stored_sequences["meta"]["energy"] == energy
-            for stored_sequences in self.global_gesture_sequences
-        ])
+        return not any(
+            [
+                stored_sequences["meta"]["energy"] == energy
+                for stored_sequences in self.global_gesture_sequences
+            ]
+        )
 
     def valid_magnitude(self, idxs):
         """
@@ -110,7 +114,10 @@ class GestureSegmenter:
         """
         return not any(
             [
-                sequence["meta"]["at_cycle"] == self.current_cycle
+                (
+                    sequence["meta"]["at_cycle"] == self.current_cycle
+                    and sequence["meta"]["cycle_name"] == self.cycle_name
+                )
                 for sequence in self.global_gesture_sequences
             ]
         )
@@ -350,6 +357,7 @@ class GestureSegmenter:
                 "meta": {
                     "at_frame": self.current_frame,
                     "at_cycle": self.current_cycle,
+                    "cycle_name": self.cycle_name,
                     "idxs": self.current_best_sequence[person],
                     "energy": energy,
                     "person_id": person,
@@ -365,29 +373,36 @@ class GestureSegmenter:
 
 # for now putting this outside class to make event handler stuff easier
 def gesture_explorer_handler(params):
-    print("Viewing gesture")
     sequence = params["sequence"]
-    for i, s in enumerate(sequence):
-        s = np.copy(s)
-        display_frame = utils.put_text(s, f"{i}/{len(sequence)}", (15, 15))
-        cv2.imshow("Sequence", display_frame)
-        k = cv2.waitKey(0)
-        training_path = "training/"
-        if k == ord("n"):
-            id = time.time()
-            print("Negative")
-            cv2.imwrite(
-                f"training/negative/neg_energy-{id}.jpg", params["energy_matrix"]
-            )
-            with open(f"training/negative/pos_mhi_sequence-{id}.npy", "wb") as f:
-                np.save(f, sequence)
+    display_frame = utils.put_text(
+        np.copy(sequence[0]), f"{0}/{len(sequence)}", (15, 15)
+    )
+    cv2.imshow("Sequence", display_frame)
+    k = cv2.waitKey(0)
+    if k == ord("c"):
+        view_gesture(params)
+    elif k == ord("q"):
+        cv2.destroyAllWindows()
+    elif k == ord("n"):
+        id = time.time()
+        print("Negative")
+        cv2.imwrite(f"training/negative/neg_energy-{id}.jpg", params["energy_matrix"])
+        with open(f"training/negative/pos_mhi_sequence-{id}.npy", "wb") as f:
+            np.save(f, sequence)
+    elif k == ord("p"):
+        id = time.time()
+        print("Positive")
+        cv2.imwrite(f"training/positive/pos_energy-{id}.jpg", params["energy_matrix"])
+        with open(f"training/positive/neg_mhi_sequence-{id}.npy", "wb") as f:
+            np.save(f, sequence)
 
-        if k == ord("p"):
-            id = time.time()
-            print("Positive")
-            cv2.imwrite(
-                f"training/positive/pos_energy-{id}.jpg", params["energy_matrix"]
-            )
-            with open(f"training/positive/neg_mhi_sequence-{id}.npy", "wb") as f:
-                np.save(f, sequence)
+    def view_gesture(params):
+        sequence = params["sequence"]
+        for i, s in enumerate(sequence):
+            s = np.copy(s)
+            display_frame = utils.put_text(s, f"{i}/{len(sequence)}", (15, 15))
+            cv2.imshow("Sequence", display_frame)
+            cv2.waitKey(50)
+
+    print("Viewing gesture")
     return True
