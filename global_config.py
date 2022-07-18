@@ -17,7 +17,7 @@ global_config = {
     "display_gesture_matrices": True,  # visualize similarity / transition matrices from gesture segmenter
     "display_captured_gestures": False,  # visualize similarity / transition matrices from gesture segmenter
     "display_mhi_canvas": True,  # visualize similarity / transition matrices from gesture segmenter
-    "gesture_limit": 5,  # max number of gestures to maintain for comparison
+    "gesture_limit": 10,  # max number of gestures to maintain for comparison
     "gesture_sensitivity": 0.6,  # aka alpha in gesture segmenter
     "gesture_heuristics": {
         "gesture_sensitivity": 0.5,  # how much to smoothe out the transition matrices

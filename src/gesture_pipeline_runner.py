@@ -1,9 +1,12 @@
 import numpy as np
+import cv2
+import time
 
 from src.gesture_segmenter import GestureSegmenter
 from src.gesture_comparer import GestureComparer
 from src.gesture_aesthetic_sequence_mapper import GestureAestheticSequenceMapper
 from src import utils
+from global_config import global_config
 
 
 class GesturePipelineRunner:
@@ -45,61 +48,90 @@ class GesturePipelineRunner:
         # where to store a cycle's output sequence (accessed by #run_cycle caller)
         self.output = []
 
-    def run_cycle(self, energy_moment_delta_volumes, mei_volumes, mhi_volumes):
-        # TODO may want to use this output variable to loop sequences by not
-        # resetting the variable - but would need to figure out length of sequence
-        # in relation to the frame position so we're not layering the sequence on
-        # top of itself
-        self.output = []
+    def run_gesture_subcycles(
+        self, energy_moment_delta_volumes, mei_volumes, mhi_volumes
+    ):
+        """
+        Here we're creating 3 concurrent cycles phased 1/3 from each other
+        Gestures are extracted from each subcycle and voted upon
 
+        This is so that the same gesture isn't selected over and over from the same
+        adjacent frames and also to account for gestures that may overlap cycles.
+        Hopefully a gesture that is extracted partially from one cycle that overlaps
+        into another will be reselected "wholly" if it occurs fully within another
+        subcycle and be voted better than the previously selected partial.
+
+        If each subcycle has selected gestures, vote on and return the best one,
+        otherwise return None
+        """
+        sequences = None
         valid_volumes = (
             all([energy_moment_delta_volumes and mei_volumes and mhi_volumes])
-        ) and len(list(energy_moment_delta_volumes.values())[0])
-        # update the frame position within the frame window
-        # this is useful for not selecting the same gesture
-        # over and over again within a window
-        self.current_frame = self.current_frame % self.frame_window_length
-        # track the number of cycles - this will help make sure
-        # we don't tag the same gesture within the same cycle
-        sequences = None
-        ##
-        # Here we're creating 3 concurrent cycles phased 1/3 from each other
-        # Gestures are extracted from each subcycle and voted upon
-        ##
+        ) and len(list(energy_moment_delta_volumes.values())[0]) > 0
         cycle_interval = self.frame_window_length // 3
         if self.current_frame == 0:
             self.current_cycle += 1
             if valid_volumes:
-                sequences = self.segment_gestures(
+                p_sequences = self.segment_gestures(
                     energy_moment_delta_volumes,
                     mei_volumes,
                     mhi_volumes,
                     self.current_cycle,
                     cycle_name="primary",
                 )
-                self.current_cycle_sequence_1 = sequences
+                self.current_cycle_sequence_1 = p_sequences
         if self.current_frame == cycle_interval:
             self.alt_cycle_1 += 1
             if valid_volumes:
-                sequences = self.segment_gestures(
+                a1_sequences = self.segment_gestures(
                     energy_moment_delta_volumes,
                     mei_volumes,
                     mhi_volumes,
                     self.alt_cycle_1,
                     cycle_name="alt_cycle_1",
                 )
-                self.current_cycle_sequence_2 = sequences
+                self.current_cycle_sequence_2 = a1_sequences
         if self.current_frame == cycle_interval * 2:
             self.alt_cycle_2 += 1
             if valid_volumes:
-                sequences = self.segment_gestures(
+                a2_sequences = self.segment_gestures(
                     energy_moment_delta_volumes,
                     mei_volumes,
                     mhi_volumes,
                     self.alt_cycle_2,
                     cycle_name="alt_cycle_2",
                 )
-                self.current_cycle_sequence_3 = sequences
+                self.current_cycle_sequence_3 = a2_sequences
+
+        if (
+            self.current_cycle_sequence_1
+            and self.current_cycle_sequence_2
+            and self.current_cycle_sequence_3
+        ):
+            sequences = self.compute_best_sequences()
+
+        # if we have stored and voted between 3 cycle sequences, reset them
+        # return sequences
+        if sequences:
+            self.current_cycle_sequence_1 = None
+            self.current_cycle_sequence_2 = None
+            self.current_cycle_sequence_3 = None
+            return sequences
+
+    def run_cycle(self, energy_moment_delta_volumes, mei_volumes, mhi_volumes):
+        sequences = None
+        # empty the ouput sequence for this upcoming cycle
+        self.output = []
+        # update the frame position within the frame window
+        # this is useful for not selecting the same gesture
+        # over and over again within a window
+        self.current_frame = self.current_frame % self.frame_window_length
+
+        # run 3 phased subcycles - will be None or dict of sequences
+        # TODO this will need adjusting for multiple people
+        sequences = self.run_gesture_subcycles(
+            energy_moment_delta_volumes, mei_volumes, mhi_volumes
+        )
 
         self.current_frame += 1
 
@@ -109,35 +141,28 @@ class GesturePipelineRunner:
             # )
             self.display_info_window()
 
-        if (
-            self.current_cycle_sequence_1
-            and self.current_cycle_sequence_2
-            and self.current_cycle_sequence_3
-        ):
-            sequences = self.compute_best_sequences()
-        else:
-            return
-
         # if we have a valid gesture sequence
         if sequences is not None:
-            # reset the stored cycle sequences
-            self.current_cycle_sequence_1 = None
-            self.current_cycle_sequence_2 = None
-            self.current_cycle_sequence_3 = None
-            # if len(self.global_gesture_sequences) < self.gesture_limit:
-            if True:
+            if len(self.global_gesture_sequences) < self.gesture_limit:
                 self.global_gesture_sequences.append(sequences)
+                if global_config["train_gesture_segmenter"]:
+                    self.display_gesture_explorer(sequences)
+                    # allow the outputs to react to this gesture
+                    # TODO - adjust this to work with multiple people
+                    # right now it'll just use the last sequence in the dict
+                    # but that's prob ok for experimenting with just me at the moment
+                    # prob want to make this output a person dict and then layer it
+                    # further down the road
+                    self.output = self.gesture_sequence_mapper.map_sequences_to_rgb(
+                        sequences
+                    )
                 # update our library of stored gestures
                 # self.gesture_comparer.update_gesture_library(
                 #     self.global_gesture_sequences
                 # )
-                # allow the outputs to react to this gesture
-                self.output = self.gesture_sequence_mapper.map_sequences_to_rgb(
-                    sequences
-                )
             # else:
             #     if self.display_captured_gestures:
-            #         self.display_captured_gestures()
+            #         self.display_captured_gestures_window()
             # self.gesture_comparer.ingest_sequences(
             #     {
             #         "energy_moment_diff_sequence": sequences[0],
@@ -151,6 +176,31 @@ class GesturePipelineRunner:
             # sequence within a threshold and reweight the library
             # then send that sequence to the sequence mapper and
             # set the output
+
+    def display_gesture_explorer(self, sequences):
+        gesture_energy_matrix = sequences["gesture_energy_matrix"]
+        energy = sequences["meta"]["energy"]
+        start, end = sequences["meta"]["idxs"]
+        mei_sequence = sequences["MEI"]
+        if global_config["train_gesture_segmenter"]:
+            utils.display_image(
+                "Energy Matrix",
+                gesture_energy_matrix,
+                normalize=True,
+                input_range=(
+                    np.min(gesture_energy_matrix),
+                    np.max(gesture_energy_matrix),
+                ),
+                resize=(300, 300),
+                text=f"e={np.round(energy, 4)} l={end-start}, c={self.current_cycle}",
+                text_params={"pos": (20, 20), "color": 0},
+                event_func=gesture_explorer_handler,
+                event_params={
+                    "sequence": mei_sequence,
+                    "energy_matrix": gesture_energy_matrix,
+                },
+                wait=0,
+            )
 
     def display_info_window(self):
         info_window = np.copy(self.info_window)
@@ -169,20 +219,23 @@ class GesturePipelineRunner:
         """
         TODO - could also try the biggest standard deviation
         """
-        if (
-            self.current_cycle_sequence_1["meta"]["energy"]
-            == self.current_cycle_sequence_2["meta"]["energy"]
-            == self.current_cycle_sequence_3["meta"]["energy"]
-        ):
-            return self.current_cycle_sequence_1
-        else:
-            candidates = [
-                self.current_cycle_sequence_1["meta"]["energy"],
-                self.current_cycle_sequence_2["meta"]["energy"],
-                self.current_cycle_sequence_3["meta"]["energy"],
-            ]
-            best_energy = np.argmax(candidates)
-            return candidates[best_energy]
+        # TODO fix for multiple people
+        for person, _ in self.current_cycle_sequence_1.items():
+            if (
+                self.current_cycle_sequence_1[person]["meta"]["energy"]
+                == self.current_cycle_sequence_2[person]["meta"]["energy"]
+                == self.current_cycle_sequence_3[person]["meta"]["energy"]
+            ):
+                return self.current_cycle_sequence_1
+            else:
+                candidates = [
+                    self.current_cycle_sequence_1[person],
+                    self.current_cycle_sequence_2[person],
+                    self.current_cycle_sequence_3[person],
+                ]
+                energies = [c["meta"]["energy"] for c in candidates]
+                best_energy = np.argmax(energies)
+                return candidates[best_energy]
 
     def segment_gestures(
         self, energy_moment_delta_volumes, mei_volumes, mhi_volumes, cycle, cycle_name
@@ -193,7 +246,8 @@ class GesturePipelineRunner:
         NOTE - this class initializes with the current list of sequences
         then with "segment gestures" method, the newly found gesture is appended
         to the list of sequences - it may eventually make sense to init this once
-        but for now initializing a new segmenter each time
+        but for now initializing a new segmenter each time - this will allow
+        params to be adjusted in realtime if needed
         """
         gs = GestureSegmenter(
             energy_diff_gesture_sequences=self.energy_diff_gesture_sequences,
@@ -217,7 +271,7 @@ class GesturePipelineRunner:
 
         return sequences
 
-    def display_captured_gestures(self):
+    def display_captured_gestures_window(self):
         # TODO add a conditional flag for this display
         for sequence_count, sequence in enumerate(self.global_gesture_sequences):
             sequence_length = len(sequence["MEI"])
@@ -241,3 +295,40 @@ class GesturePipelineRunner:
                     convert_image_color=True,
                 )
                 utils.display_image("Gesture", frame, top=True, wait=0)
+
+
+# for now putting this outside class to make event handler stuff easier
+def gesture_explorer_handler(params):
+    def view_gesture(params):
+        sequence = params["sequence"]
+        for i, s in enumerate(sequence):
+            s = np.copy(s)
+            display_frame = utils.put_text(s, f"{i}/{len(sequence)}", (15, 15))
+            cv2.imshow("Sequence", display_frame)
+            cv2.waitKey(50)
+
+    sequence = params["sequence"]
+    display_frame = utils.put_text(
+        np.copy(sequence[0]), f"{0}/{len(sequence)}", (15, 15)
+    )
+    cv2.imshow("Sequence", display_frame)
+    k = cv2.waitKey(0)
+    if k == ord("c"):
+        view_gesture(params)
+    elif k == ord("q"):
+        cv2.destroyAllWindows()
+    elif k == ord("n"):
+        id = time.time()
+        print("Negative")
+        cv2.imwrite(f"training/negative/neg_energy-{id}.jpg", params["energy_matrix"])
+        with open(f"training/negative/pos_mhi_sequence-{id}.npy", "wb") as f:
+            np.save(f, sequence)
+    elif k == ord("p"):
+        id = time.time()
+        print("Positive")
+        cv2.imwrite(f"training/positive/pos_energy-{id}.jpg", params["energy_matrix"])
+        with open(f"training/positive/neg_mhi_sequence-{id}.npy", "wb") as f:
+            np.save(f, sequence)
+
+    print("Viewing gesture")
+    return True

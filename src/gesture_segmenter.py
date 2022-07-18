@@ -1,10 +1,8 @@
 import math
-import time
 import cv2
 import numpy as np
 import scipy.signal
 from src import utils
-from global_config import global_config
 
 
 class GestureSegmenter:
@@ -329,27 +327,8 @@ class GestureSegmenter:
             gesture_energy_matrix = (255 - gesture_energy_matrix).astype(np.uint8)
             energy = self.compute_total_energy_change(gesture_energy_matrix)
             if not self.run_validations(sequence_idxs, energy):
-                return
-            if global_config["train_gesture_segmenter"]:
-                utils.display_image(
-                    "Energy Matrix",
-                    gesture_energy_matrix,
-                    normalize=True,
-                    input_range=(
-                        np.min(gesture_energy_matrix),
-                        np.max(gesture_energy_matrix),
-                    ),
-                    resize=(300, 300),
-                    text=f"e={np.round(energy, 4)} l={end-start}, c={self.current_cycle}",
-                    text_params={"pos": (20, 20), "color": 0},
-                    event_func=gesture_explorer_handler,
-                    event_params={
-                        "sequence": mei_sequence,
-                        "energy_matrix": gesture_energy_matrix,
-                    },
-                    wait=0,
-                )
-            sequences = {
+                continue
+            sequences[person] = {
                 "MEI": mei_sequence,
                 "MHI": mhi_sequence,
                 "energy_diff": energy_diff_sequence,
@@ -369,40 +348,3 @@ class GestureSegmenter:
         if sequences:
             # TODO will this work
             return sequences
-
-
-# for now putting this outside class to make event handler stuff easier
-def gesture_explorer_handler(params):
-    sequence = params["sequence"]
-    display_frame = utils.put_text(
-        np.copy(sequence[0]), f"{0}/{len(sequence)}", (15, 15)
-    )
-    cv2.imshow("Sequence", display_frame)
-    k = cv2.waitKey(0)
-    if k == ord("c"):
-        view_gesture(params)
-    elif k == ord("q"):
-        cv2.destroyAllWindows()
-    elif k == ord("n"):
-        id = time.time()
-        print("Negative")
-        cv2.imwrite(f"training/negative/neg_energy-{id}.jpg", params["energy_matrix"])
-        with open(f"training/negative/pos_mhi_sequence-{id}.npy", "wb") as f:
-            np.save(f, sequence)
-    elif k == ord("p"):
-        id = time.time()
-        print("Positive")
-        cv2.imwrite(f"training/positive/pos_energy-{id}.jpg", params["energy_matrix"])
-        with open(f"training/positive/neg_mhi_sequence-{id}.npy", "wb") as f:
-            np.save(f, sequence)
-
-    def view_gesture(params):
-        sequence = params["sequence"]
-        for i, s in enumerate(sequence):
-            s = np.copy(s)
-            display_frame = utils.put_text(s, f"{i}/{len(sequence)}", (15, 15))
-            cv2.imshow("Sequence", display_frame)
-            cv2.waitKey(50)
-
-    print("Viewing gesture")
-    return True
