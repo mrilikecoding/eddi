@@ -74,6 +74,7 @@ class GesturePipelineRunner:
         if self.current_frame == 0:
             self.current_cycle += 1
             if valid_volumes:
+                # primary sequence
                 p_sequences = self.segment_gestures(
                     energy_moment_delta_volumes,
                     mei_volumes,
@@ -85,6 +86,7 @@ class GesturePipelineRunner:
         if self.current_frame == cycle_interval:
             self.alt_cycle_1 += 1
             if valid_volumes:
+                # alt 1 sequence
                 a1_sequences = self.segment_gestures(
                     energy_moment_delta_volumes,
                     mei_volumes,
@@ -96,6 +98,7 @@ class GesturePipelineRunner:
         if self.current_frame == cycle_interval * 2:
             self.alt_cycle_2 += 1
             if valid_volumes:
+                # alt 2 sequence
                 a2_sequences = self.segment_gestures(
                     energy_moment_delta_volumes,
                     mei_volumes,
@@ -110,7 +113,13 @@ class GesturePipelineRunner:
             and self.current_cycle_sequence_2
             and self.current_cycle_sequence_3
         ):
-            sequences = self.compute_best_sequences()
+            for person, _ in self.current_cycle_sequence_1.items():
+                candidates = [
+                    self.current_cycle_sequence_1[person],
+                    self.current_cycle_sequence_2[person],
+                    self.current_cycle_sequence_3[person],
+                ]
+            sequences = self.gesture_comparer.compute_best_sequences(candidates)
 
         # if we have stored and voted between 3 cycle sequences, reset them
         # return sequences
@@ -122,9 +131,6 @@ class GesturePipelineRunner:
             return sequences
 
     def run_cycle(self, energy_moment_delta_volumes, mei_volumes, mhi_volumes):
-        # loop captured gestures
-        self.loop_global_gesture_display()
-
         sequences = None
         # empty the ouput sequence for this upcoming cycle
         self.output = []
@@ -141,48 +147,31 @@ class GesturePipelineRunner:
 
         self.current_frame += 1
 
-        if self.display_info:
-            # print(
-            #     f"v-{valid_volumes} f-{self.current_frame} c-{self.current_cycle} a1-{self.alt_cycle_1} a2-{self.alt_cycle_2}"
-            # )
-            self.display_info_window()
-
         # if we have a valid gesture sequence
         if sequences is not None:
-            if len(self.global_gesture_sequences) < self.gesture_limit:
-                # TODO make work for multiple people
-                self.global_gesture_sequences.append(sequences[0])
-                # if global_config["train_gesture_segmenter"]:
-                #     self.display_gesture_explorer(sequences)
-                # allow the outputs to react to this gesture
-                # right now it'll just use the last sequence in the dict
-                # but that's prob ok for experimenting with just me at the moment
-                # prob want to make this output a person dict and then layer it
-                # further down the road
-                # TODO - adjust this to work with multiple people
-                self.output = self.gesture_sequence_mapper.map_sequences_to_rgb(
-                    sequences
-                )
-                # update our library of stored gestures
-                # self.gesture_comparer.update_gesture_library(
-                #     self.global_gesture_sequences
-                # )
-            # else:
-            #     if self.display_captured_gestures:
-            #         self.display_captured_gestures_window()
-            # self.gesture_comparer.ingest_sequences(
-            #     {
-            #         "energy_moment_diff_sequence": sequences[0],
-            #         "mei_sequence": sequences[1],
-            #         "mhi_sequence": sequences[2],
-            #         "global_sequence": sequences[3],
-            #     }
-            # )
+            # TODO make work for multiple people
+            # self.global_gesture_sequences.append(sequences[0])
+            self.gesture_comparer.ingest_sequences(sequences=sequences)
+            self.global_gesture_sequences = (
+                self.gesture_comparer.gesture_sequence_library
+            )
+            # if global_config["train_gesture_segmenter"]:
+            #     self.display_gesture_explorer(sequences)
+            # allow the outputs to react to this gesture
+            # right now it'll just use the last sequence in the dict
+            # but that's prob ok for experimenting with just me at the moment
+            # prob want to make this output a person dict and then layer it
+            # further down the road
+            # TODO - adjust this to work with multiple people
+            self.output = self.gesture_sequence_mapper.map_sequences_to_rgb(
+                self.gesture_comparer.best_output
+            )
             # TODO when ingesting sequences, we want to get back
             # a sequence from the comparer that is the most similar
             # sequence within a threshold and reweight the library
             # then send that sequence to the sequence mapper and
             # set the output
+        self.gesture_comparer.process_cycle()
 
     def display_gesture_explorer(self, sequences):
         gesture_energy_matrix = sequences["gesture_energy_matrix"]
@@ -208,41 +197,6 @@ class GesturePipelineRunner:
                 },
                 wait=0,
             )
-
-    def display_info_window(self):
-        info_window = np.copy(self.info_window)
-        utils.put_text(
-            info_window,
-            {
-                "current_cycle_1": self.current_cycle,
-                "alt_cycle_1": self.alt_cycle_1,
-                "alt_cycle_2": self.alt_cycle_2,
-            },
-            (20, 20),
-        )
-        utils.display_image("Gesture Pipeline Info", info_window)
-
-    def compute_best_sequences(self):
-        """
-        TODO - could also try the biggest standard deviation
-        """
-        # TODO fix for multiple people
-        for person, _ in self.current_cycle_sequence_1.items():
-            if (
-                self.current_cycle_sequence_1[person]["meta"]["energy"]
-                == self.current_cycle_sequence_2[person]["meta"]["energy"]
-                == self.current_cycle_sequence_3[person]["meta"]["energy"]
-            ):
-                return self.current_cycle_sequence_1
-            else:
-                candidates = [
-                    self.current_cycle_sequence_1,
-                    self.current_cycle_sequence_2,
-                    self.current_cycle_sequence_3,
-                ]
-                energies = [c[person]["meta"]["energy"] for c in candidates]
-                best_energy = np.argmax(energies)
-                return candidates[best_energy]
 
     def segment_gestures(
         self, energy_moment_delta_volumes, mei_volumes, mhi_volumes, cycle, cycle_name
@@ -302,42 +256,6 @@ class GesturePipelineRunner:
                     convert_image_color=True,
                 )
                 utils.display_image("Gesture", frame, top=True, wait=0)
-
-    def loop_global_gesture_display(self):
-        if len(self.global_gesture_sequences) == 0:
-            return
-
-        max_len = 50  # TODO set this to the max gesture size
-        c = self.sequence_viewer_counter
-        frames = []
-        for i, seq in enumerate(self.global_gesture_sequences):
-            out = None
-            # TODO currently hacked for just one person (key 0) - fix
-            mei = seq["MEI"]
-            energy = seq["meta"]["energy"]
-            gesture_energy = seq["gesture_energy_matrix"]
-            _, h, _ = mei.shape
-            gesture_energy = cv2.resize(gesture_energy, (h, h))
-            if c < len(mei):
-                frame = mei[c]
-            else:
-                frame = mei[-1]
-            out = np.concatenate([frame, gesture_energy], axis=1)
-            out = utils.put_text(
-                out,
-                f"{i}:e-{np.round(energy, 4)}, l-{len(mei)}",
-                (15, 15),
-                color=200,
-                thickness=1,
-            )
-            frames.append(out)
-
-        view = np.concatenate(frames, axis=0)
-        utils.display_image("Captured Gestures", view)
-        if self.sequence_viewer_counter == max_len:
-            self.sequence_viewer_counter = 0
-        else:
-            self.sequence_viewer_counter += 1
 
 
 # for now putting this outside class to make event handler stuff easier

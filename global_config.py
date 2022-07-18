@@ -14,7 +14,7 @@ global_config = {
     "train_gesture_segmenter": True,
     "frame_decay": 3,  # how much to decay each frame in motion history
     "frame_window_length": 70,  # how many frames to keep in memory
-    "display_gesture_matrices": True,  # visualize similarity / transition matrices from gesture segmenter
+    "display_gesture_matrices": False,  # visualize similarity / transition matrices from gesture segmenter
     "display_captured_gestures": False,  # display captured gestures when limit is reached
     "display_mhi_canvas": True,  # visualize similarity / transition matrices from gesture segmenter
     "gesture_limit": 5,  # max number of gestures to maintain for comparison
