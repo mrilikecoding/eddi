@@ -342,7 +342,6 @@ class GestureSegmenter:
                     "person_id": person,
                 },
             }
-            print("Gesture detected!")
 
         # if we have sequences, return them, otherwise return None
         if sequences:
