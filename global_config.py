@@ -13,16 +13,15 @@ global_config = {
     },
     "train_gesture_segmenter": True,
     "frame_decay": 3,  # how much to decay each frame in motion history
-    "frame_window_length": 66,  # how many frames to keep in memory
+    "frame_window_length": 70,  # how many frames to keep in memory
     "display_gesture_matrices": True,  # visualize similarity / transition matrices from gesture segmenter
-    "display_captured_gestures": False,  # visualize similarity / transition matrices from gesture segmenter
+    "display_captured_gestures": False,  # display captured gestures when limit is reached
     "display_mhi_canvas": True,  # visualize similarity / transition matrices from gesture segmenter
-    "gesture_limit": 10,  # max number of gestures to maintain for comparison
-    "gesture_sensitivity": 0.6,  # aka alpha in gesture segmenter
+    "gesture_limit": 5,  # max number of gestures to maintain for comparison
     "gesture_heuristics": {
-        "gesture_sensitivity": 0.5,  # how much to smoothe out the transition matrices
-        "minimum_frame_count": 20,  # min magnitude (frame count) of gesture
-        "maximum_frame_count": 50,  # max magnitude (frame count) of gesture
+        "gesture_sensitivity": 0.3,  # how much to smoothe out the transition matrices
+        "minimum_frame_count": 30,  # min magnitude (frame count) of gesture
+        "maximum_frame_count": 65,  # max magnitude (frame count) of gesture
         "min_energy_threshold": 0.2,  # how much energy should a gesture have
         "max_energy_threshold": 0.9,  # upper bound of gesture energy
     },
