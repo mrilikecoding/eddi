@@ -194,12 +194,18 @@ class MotionHistoryImager(PipelineNode):
             return
         MEI_canvas = self.MEI_canvases[person]
         MHI_canvas = self.MHI_canvases[person]
+        # each polygon below will be filled
         tri1 = "head", "leftShoulder", "neck", "rightShoulder"
         tri2 = "leftShoulder", "leftElbow", "leftHand"
         tri3 = "rightShoulder", "rightElbow", "rightHand"
         tri4 = "torso", "leftShoulder", "rightShoulder"
         tri5 = "torso", "leftHip", "rightHip"
-        for joint_list in [tri1, tri2, tri3, tri4, tri5]:
+        tri6 = "leftHand", "torso", "leftShoulder"
+        tri7 = "rightHand", "torso", "rightShoulder"
+        tri8 = "leftHand", "rightHand", "head",
+        tri8 = "leftHand", "rightHand", "rightShoulder", "leftShoulder",
+        
+        for joint_list in [tri1, tri2, tri3, tri4, tri5, tri6, tri7, tri8]:
             joint_inputs = self.joint_position_indices[person]
             joints = [
                 joint_inputs[joint] for joint in joint_list if joint in joint_inputs
