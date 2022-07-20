@@ -6,6 +6,7 @@ from skimage.draw import line
 
 from collections import deque
 from src.pipeline_node import PipelineNode
+from global_config import global_config
 
 
 class MotionHistoryImager(PipelineNode):
@@ -16,7 +17,12 @@ class MotionHistoryImager(PipelineNode):
     """
 
     def __init__(
-        self, min_max_dimensions, frame_window_length, frame_decay, display_canvas=False
+        self,
+        min_max_dimensions,
+        frame_window_length,
+        frame_decay,
+        display_canvas=False,
+        display_params={},
     ):
         self.input_joint_list = []
         # for normalizing constants
@@ -28,6 +34,7 @@ class MotionHistoryImager(PipelineNode):
         self.max_z = min_max_dimensions["max_z"]
 
         self.display_canvas = display_canvas
+        self.display_params = display_params
         # set each MHI canvas's dimensions
         self.w = int(min_max_dimensions["max_x"] - min_max_dimensions["min_x"])
         self.h = int(min_max_dimensions["max_y"] - min_max_dimensions["min_y"])
@@ -363,6 +370,8 @@ class MotionHistoryImager(PipelineNode):
             # canvases = np.concatenate([MHI_canvases, MEI_canvases], axis=0)
             canvases = MHI_canvases
             window_name = "MHI Canvas"
+            if global_config["miror_canvas_display"]:
+                canvases = cv2.flip(canvases, 1)
             cv2.imshow(window_name, canvases)
             cv2.setWindowProperty(window_name, cv2.WND_PROP_TOPMOST, 1)
             cv2.waitKey(1)

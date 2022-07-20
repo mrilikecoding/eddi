@@ -44,15 +44,6 @@ class SpatialLightController(Controller):
         self.send_channel_message = send_channel_message
         self.sequencer = Sequencer()
 
-        # Motion Imaging Initialization
-        # track global input image state in this class
-        self.motion_history_imager = MotionHistoryImager(
-            min_max_dimensions=global_config["space_min_max_dimensions"],
-            frame_window_length=global_config["frame_window_length"],
-            frame_decay=global_config["frame_decay"],
-            display_canvas=global_config["display_mhi_canvas"],
-        )
-
         # Gesture Pipeline Initialization
         # track global gesture state in this class
         self.gesture_pipeline = GesturePipelineRunner(
@@ -61,6 +52,15 @@ class SpatialLightController(Controller):
             display_captured_gestures=global_config["display_captured_gestures"],
             gesture_limit=global_config["gesture_limit"],
             gesture_heuristics=global_config["gesture_heuristics"],
+        )
+
+        # Motion Imaging Initialization
+        # track global input image state in this class
+        self.motion_history_imager = MotionHistoryImager(
+            min_max_dimensions=global_config["space_min_max_dimensions"],
+            frame_window_length=global_config["frame_window_length"],
+            frame_decay=global_config["frame_decay"],
+            display_canvas=global_config["display_mhi_canvas"],
         )
 
         self.input_processing_pipeline = [

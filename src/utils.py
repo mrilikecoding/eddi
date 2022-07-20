@@ -1,3 +1,4 @@
+import math
 import cv2
 import numpy as np
 
@@ -86,3 +87,24 @@ def normalize_point(x, min_x, max_x, min_target, max_target, return_boundary=Fal
 
     x_norm = ((x - min_x) / (max_x - min_x)) * (max_target - min_target)
     return x_norm
+
+
+def safe_log10(x, eps=1e-10):
+    """
+    protect against zero division edge cases
+    this basically replaces 0 with extremely small val
+    """
+    result = np.where(x > eps, x, -10)
+    np.log10(result, out=result, where=result > 0)
+    return result
+
+
+def compute_hu_moments(img):
+    img = np.copy(img).astype(np.float32)
+    moments = cv2.moments(img)
+    hu_moments = cv2.HuMoments(moments).flatten()
+    for i in range(0, 7):
+        hu_moments[i] = (
+            -1 * math.copysign(1.0, hu_moments[i]) * safe_log10(abs(hu_moments[i]))
+        )
+    return hu_moments
