@@ -22,6 +22,7 @@ class GestureComparer:
         self.sequence_viewer_counter = 0
         self.candidate_sequences = None
         self.most_similar_sequence_index = None
+        self.detected_gesture_count = 0
 
     def process_cycle(self):
         # loop captured gestures
@@ -29,6 +30,7 @@ class GestureComparer:
 
     def ingest_sequences(self, sequences):
         self.candidate_sequences = sequences
+        self.detected_gesture_count += 1
         if len(self.gesture_sequence_library) < self.gesture_limit:
             self.most_similar_sequence_index = None
             self.gesture_sequence_library.append(sequences)
@@ -174,6 +176,11 @@ class GestureComparer:
         for i, seq in enumerate(
             [self.candidate_sequences] + self.gesture_sequence_library
         ):
+            similarity_sequence = (
+                similar_gesture_detected
+                and self.most_similar_sequence_index[0] == i - 1
+            )
+
             out = None
             # TODO currently hacked for just one person (key 0) - fix
             mei = seq["MEI"]
@@ -195,14 +202,11 @@ class GestureComparer:
                     f"Current Gesture Sim: {np.round(self.similarities[i-1], 4)}",
                     (15, 40),
                 )
-                if (
-                    similar_gesture_detected
-                    and self.most_similar_sequence_index[0] == i - 1
-                ):
+                if similarity_sequence:
                     info_window = utils.put_text(
                         info_window,
                         "CLOSEST SEQUENCE",
-                        (45, 160),
+                        (65, 170),
                     )
                     info_window = cv2.circle(
                         info_window,
@@ -214,6 +218,11 @@ class GestureComparer:
             else:
                 info_window = utils.put_text(
                     info_window, "Candidate Sequence", (15, 20)
+                )
+                info_window = utils.put_text(
+                    info_window,
+                    f"Input Sequence: {self.detected_gesture_count}",
+                    (15, 40),
                 )
             w_remainder = w % 3
             gesture_energy = cv2.resize(gesture_energy, (w // 3, w // 3))
@@ -231,7 +240,7 @@ class GestureComparer:
             out = utils.put_text(
                 out,
                 f"{i}:std-{std}, e-{energy}, len-{len(mei)}",
-                (15, 15),
+                (15, 20),
                 color=(200, 200, 0),
                 thickness=2,
             )
@@ -239,12 +248,15 @@ class GestureComparer:
             # draw a rectangle to distingish
             if i == 0:
                 h, w = out.shape
+                out = cv2.rectangle(out, (4, 4), (w - 4, h - 4), 127, 4)
+            elif similarity_sequence:
+                h, w = out.shape
                 out = cv2.rectangle(out, (4, 4), (w - 4, h - 4), 255, 4)
 
             frames.append(out)
 
         view = np.concatenate(frames, axis=1)
-        utils.display_image("Captured Gestures | Candidate Sequence", view)
+        utils.display_image("Candidate Sequence | Captured Gestures", view)
         if self.sequence_viewer_counter == max_len:
             self.sequence_viewer_counter = 0
         else:
