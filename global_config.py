@@ -29,5 +29,5 @@ global_config = {
     },
     "repeated_gesture_similarity_threshold": 7.0,  # upper bound of similarity score when selected a repeated gesture
     "weight_increase_factor": 1.5,  # how much to scale up the weight of a repeated gesture
-    "weight_pruning_threshold": 0.2,  # when to drop off a gesture from library if the weights have been lowered enough
+    "weight_pruning_threshold": 0.18,  # when to drop off a gesture from library if the weights have been lowered enough
 }
