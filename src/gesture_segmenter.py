@@ -111,16 +111,14 @@ class GestureSegmenter:
             for stored_sequences in self.global_gesture_sequences
         ]
         # we each gesture to be unique - false if similarity is below a certain distance
-        flat_below_threshold = [m <= 0.15 for m in flat_moment_distances]
-        last_below_threshold = [m <= 0.15 for m in mhi_moment_distances]
+        flat_below_threshold = [m <= 0.05 for m in flat_moment_distances]
+        last_below_threshold = [m <= 0.05 for m in mhi_moment_distances]
         # print(f"mhi {mhi_moment_distances}, flat {flat_moment_distances}")
         # print(f"THRESHOLD - flat: {flat_below_threshold}, mhi: {last_below_threshold}")
         if not (any(flat_below_threshold) and any(last_below_threshold)):
             return True
         else:
-            print("TOO SIMILAR")
-            print(flat_below_threshold)
-            print(last_below_threshold)
+            print("GESTURE TOO SIMILAR TO EXISTING")
             return False
 
     def valid_std(self, std):
