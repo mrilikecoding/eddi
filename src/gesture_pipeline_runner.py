@@ -130,7 +130,6 @@ class GesturePipelineRunner:
             self.current_cycle_sequence_1 = None
             self.current_cycle_sequence_2 = None
             self.current_cycle_sequence_3 = None
-            print("Gesture detected!")
             return sequences
 
     def run_cycle(self, energy_moment_delta_volumes, mei_volumes, mhi_volumes):
@@ -155,13 +154,13 @@ class GesturePipelineRunner:
         self.current_frame += 1
 
         # if we have a valid gesture sequence
+        self.global_gesture_sequences = self.gesture_comparer.gesture_sequence_library
         if sequences is not None:
+            print("Gesture Detected")
+
             # TODO make work for multiple people
             # self.global_gesture_sequences.append(sequences[0])
             self.gesture_comparer.ingest_sequences(sequences=sequences)
-            self.global_gesture_sequences = (
-                self.gesture_comparer.gesture_sequence_library
-            )
             # if global_config["train_gesture_segmenter"]:
             #     self.display_gesture_explorer(sequences)
             # allow the outputs to react to this gesture

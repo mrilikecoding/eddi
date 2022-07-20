@@ -79,6 +79,9 @@ class GestureAestheticSequenceMapper:
         compute a dyanmic curve for each dimension
         maybe use the energymei
         """
+        if not sequences:
+            return
+
         frame_count, h, w = sequences["MEI"].shape
         energy_diff = sequences["energy_diff"]
         mhi = sequences["MHI"]
