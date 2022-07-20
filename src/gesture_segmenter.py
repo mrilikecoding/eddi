@@ -24,6 +24,7 @@ class GestureSegmenter:
         cycle_name="primary",
         alpha=0.5,
         display=True,
+        gesture_limit_reached=False,
         gesture_heuristics={},
     ):
         self.display = display
@@ -48,6 +49,7 @@ class GestureSegmenter:
         self.current_best_sequence = {}
         # NOTE for output - these sequences are passed in, appended to, and returned
         self.global_gesture_sequences = global_gesture_sequences
+        self.gesture_limit_reached = gesture_limit_reached
         self.MEI_gesture_sequences = MEI_gesture_sequences
         self.MHI_gesture_sequences = MHI_gesture_sequences
         self.energy_diff_gesture_sequences = energy_diff_gesture_sequences
@@ -69,15 +71,60 @@ class GestureSegmenter:
             # self.display_similarity_matrices()
             self.display_transition_matrices()
 
-    def run_validations(self, sequence_idxs, energy):
-        if (
-            self.valid_gesture_cycle()
-            and self.valid_magnitude(sequence_idxs)
-            and self.valid_energy(energy)
-            and self.valid_unique_energy(energy)
-        ):
+    def run_validations(
+        self, sequence_idxs, energy, std, last_mhi_hu_moments, flattened_mhi_hu_moments
+    ):
+        validations = []
+        if self.gesture_limit_reached:
+            validations = [
+                self.valid_gesture_cycle(),
+                self.valid_magnitude(sequence_idxs),
+                self.valid_energy(energy),
+                self.valid_std(std),
+            ]
+        else:
+            validations = [
+                self.valid_gesture_cycle(),
+                self.valid_magnitude(sequence_idxs),
+                self.valid_energy(energy),
+                self.valid_std(std),
+                self.valid_unique_energy(energy),
+                self.valid_unique_mhi_moments(
+                    last_mhi_hu_moments, flattened_mhi_hu_moments
+                ),
+            ]
+        return all(validations)
+
+    def valid_unique_mhi_moments(self, last_mhi_hu_moments, flattened_mhi_hu_moments):
+        mhi_moment_distances = [
+            math.dist(
+                stored_sequences["meta"]["last_mhi_hu_moments"][0:2],
+                last_mhi_hu_moments[0:2],
+            )
+            for stored_sequences in self.global_gesture_sequences
+        ]
+        flat_moment_distances = [
+            math.dist(
+                stored_sequences["meta"]["flattened_mhi_hu_moments"][0:2],
+                flattened_mhi_hu_moments[0:2],
+            )
+            for stored_sequences in self.global_gesture_sequences
+        ]
+        # we each gesture to be unique - false if similarity is below a certain distance
+        flat_below_threshold = [m <= 0.15 for m in flat_moment_distances]
+        last_below_threshold = [m <= 0.15 for m in mhi_moment_distances]
+        # print(f"mhi {mhi_moment_distances}, flat {flat_moment_distances}")
+        # print(f"THRESHOLD - flat: {flat_below_threshold}, mhi: {last_below_threshold}")
+        if not (any(flat_below_threshold) and any(last_below_threshold)):
             return True
-        return False
+        else:
+            print("TOO SIMILAR")
+            print(flat_below_threshold)
+            print(last_below_threshold)
+            return False
+
+    def valid_std(self, std):
+        return std > self.gesture_heuristics["min_std_threshold"]
 
     def valid_energy(self, energy):
         return (
@@ -274,7 +321,7 @@ class GestureSegmenter:
         sequence_indices = (biggest_motion_sequence[0], biggest_motion_sequence[1])
         return sequence_indices
 
-    def compute_total_energy_change(self, gesture_transition_matrix):
+    def compute_total_energy_change(self, mei_sequence, mhi_sequence):
         """
         computes the sum of the mhi - mei sequence values
         this will inevitably be very large (millions)
@@ -284,9 +331,17 @@ class GestureSegmenter:
         # TODO there's probably some refining to do here
         # need some better tooling to analyze this
         # not sure if it makes sense to use energy diff sequence
-        total_energy_change = np.sum(gesture_transition_matrix)
-        total_energy_change = total_energy_change * 1e-6
+        energy_delta = mhi_sequence - mei_sequence
+        total_energy_change = np.sum(energy_delta)
+        total_energy_change = total_energy_change * 1e-8
         return total_energy_change
+
+    def compute_standard_deviation(self, mhi_sequence):
+        """
+        Return std of values
+        """
+        std = np.std(mhi_sequence)
+        return std
 
     def segment_gestures(
         self,
@@ -325,21 +380,42 @@ class GestureSegmenter:
                 start:end, start:end
             ]
             gesture_energy_matrix = (255 - gesture_energy_matrix).astype(np.uint8)
-            energy = self.compute_total_energy_change(gesture_energy_matrix)
-            if not self.run_validations(sequence_idxs, energy):
+            last_mhi = mhi_sequence[-1]
+            flattened_mhi = np.where(last_mhi > 0, 255, 0)
+            last_mhi_hu_moments = utils.compute_hu_moments(last_mhi)
+            flattened_mhi_hu_moments = utils.compute_hu_moments(flattened_mhi)
+            energy = self.compute_total_energy_change(mei_sequence, mhi_sequence)
+            std = self.compute_standard_deviation(mhi_sequence)
+            # NOTE - for validations that check against similarities with other sequences
+            # in the stored sequence array, we only want to prevent new similar gestures
+            # if we have not yet maxed out our stored gestures. I.E. we want x unique gestures.
+            # however, once we have those gestures, we're interested in examining similar gestures
+            # so if len(stored_sequences) == gesture limit then don't prevent similar gestures
+            # from being returned sequences
+            if not self.run_validations(
+                sequence_idxs,
+                energy,
+                std,
+                last_mhi_hu_moments,
+                flattened_mhi_hu_moments,
+            ):
                 continue
             sequences[person] = {
                 "MEI": mei_sequence,
                 "MHI": mhi_sequence,
                 "energy_diff": energy_diff_sequence,
                 "gesture_energy_matrix": gesture_energy_matrix,
+                "flattened_mhi": flattened_mhi,
                 "meta": {
                     "at_frame": self.current_frame,
                     "at_cycle": self.current_cycle,
                     "cycle_name": self.cycle_name,
                     "idxs": self.current_best_sequence[person],
                     "energy": energy,
+                    "std": std,
                     "person_id": person,
+                    "last_mhi_hu_moments": last_mhi_hu_moments,
+                    "flattened_mhi_hu_moments": flattened_mhi_hu_moments,
                 },
             }
 

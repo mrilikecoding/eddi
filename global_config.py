@@ -11,18 +11,23 @@ global_config = {
         "max_z": 2950.0,
         "min_z": 1400,
     },
+    "miror_canvas_display": True,  # helpful if you're watching yourself
     "train_gesture_segmenter": True,
     "frame_decay": 3,  # how much to decay each frame in motion history
     "frame_window_length": 70,  # how many frames to keep in memory
     "display_gesture_matrices": False,  # visualize similarity / transition matrices from gesture segmenter
     "display_captured_gestures": False,  # display captured gestures when limit is reached
     "display_mhi_canvas": True,  # visualize similarity / transition matrices from gesture segmenter
-    "gesture_limit": 5,  # max number of gestures to maintain for comparison
+    "gesture_limit": 3,  # max number of gestures to maintain for comparison
     "gesture_heuristics": {
-        "gesture_sensitivity": 0.3,  # how much to smoothe out the transition matrices
+        "gesture_sensitivity": 0.3,  # how much to smoothe out the transition matrices - bigger values mean looser transitions
         "minimum_frame_count": 30,  # min magnitude (frame count) of gesture
         "maximum_frame_count": 65,  # max magnitude (frame count) of gesture
-        "min_energy_threshold": 0.2,  # how much energy should a gesture have
-        "max_energy_threshold": 0.9,  # upper bound of gesture energy
+        "min_std_threshold": 80.0,  # how much  variance should be in the gesture
+        "min_energy_threshold": 2.0,  # how much energy should a gesture have
+        "max_energy_threshold": 10.0,  # upper bound of gesture energy
     },
+    "repeated_gesture_similarity_threshold": 7.0,  # upper bound of similarity score when selected a repeated gesture
+    "weight_increase_factor": 1.5,  # how much to scale up the weight of a repeated gesture
+    "weight_pruning_threshold": 0.2,  # when to drop off a gesture from library if the weights have been lowered enough
 }

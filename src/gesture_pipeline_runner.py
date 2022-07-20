@@ -25,6 +25,7 @@ class GesturePipelineRunner:
         self.MHI_gesture_sequences = {}
         self.global_gesture_sequences = []
         self.gesture_limit = gesture_limit
+        self.gesture_limit_reached = False
         self.gesture_heuristics = gesture_heuristics
         self.current_frame = 0
         self.current_cycle = 0
@@ -38,6 +39,8 @@ class GesturePipelineRunner:
         self.current_cycle_sequence_1 = None
         self.current_cycle_sequence_2 = None
         self.current_cycle_sequence_3 = None
+
+        self.out_params = {}
 
         self.display_info = display_info
         self.info_window = np.zeros((200, 500))
@@ -134,6 +137,10 @@ class GesturePipelineRunner:
         sequences = None
         # empty the ouput sequence for this upcoming cycle
         self.output = []
+        if len(self.global_gesture_sequences) == self.gesture_limit:
+            self.gesture_limit_reached = True
+        else:
+            self.gesture_limit_reached = False
         # update the frame position within the frame window
         # this is useful for not selecting the same gesture
         # over and over again within a window
@@ -215,6 +222,7 @@ class GesturePipelineRunner:
             MEI_gesture_sequences=self.MEI_gesture_sequences,
             MHI_gesture_sequences=self.MHI_gesture_sequences,
             global_gesture_sequences=self.global_gesture_sequences,
+            gesture_limit_reached=self.gesture_limit_reached,
             energy_moment_delta_volumes=energy_moment_delta_volumes,
             frame_window_length=self.frame_window_length,
             current_frame=self.current_frame,
