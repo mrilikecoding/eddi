@@ -35,7 +35,13 @@ class GestureComparer:
             self.most_similar_sequence_index = None
             self.gesture_sequence_library.append(sequences)
             self.best_output = sequences
-            self.set_gesture_weights()
+            if len(self.weights) == 0:
+                self.set_gesture_weights()
+            else:
+                self.weights = np.append(
+                    self.weights, 1 / len(self.gesture_sequence_library)
+                )
+                self.normalize_weights()
             self.set_similarities()
         else:
             self.similarities = self.compute_similarity(sequences)
@@ -124,11 +130,14 @@ class GestureComparer:
             self.gesture_sequence_library
         )
 
+    def normalize_weights(self):
+        self.weights = self.weights / np.sum(self.weights)
+
     def update_gesture_weights(self, boost_idx):
         self.weights[boost_idx] = (
             self.weights[boost_idx] * global_config["weight_increase_factor"]
         )
-        self.weights = self.weights / np.sum(self.weights)
+        self.normalize_weights()
 
     def prune_low_weights(self):
         """
@@ -206,7 +215,7 @@ class GestureComparer:
                     info_window = utils.put_text(
                         info_window,
                         "CLOSEST SEQUENCE",
-                        (65, 170),
+                        (int(w / 2), 170),
                     )
                     info_window = cv2.circle(
                         info_window,
