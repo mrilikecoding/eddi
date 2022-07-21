@@ -12,6 +12,7 @@ def display_image(
     top=True,
     wait=-1,
     event_func=None,
+    cv_event_handler=None,
     event_params={},
     text=None,
     text_params=None,
@@ -36,7 +37,7 @@ def display_image(
             img, text, position=text_params["pos"], color=text_params["color"]
         )
 
-    cv2.imshow(window_name, img)
+    cv2.namedWindow(window_name)
     if top:
         cv2.setWindowProperty(window_name, cv2.WND_PROP_TOPMOST, 1)
     if wait >= 0:
@@ -48,6 +49,9 @@ def display_image(
                 event_func(event_params)
         else:
             cv2.destroyAllWindows()
+    if cv_event_handler:
+        cv2.setMouseCallback(window_name, cv_event_handler, param=event_params)
+    cv2.imshow(window_name, img)
 
 
 def put_text(
