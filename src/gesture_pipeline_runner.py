@@ -134,8 +134,17 @@ class GesturePipelineRunner:
 
     def run_cycle(self, energy_moment_delta_volumes, mei_volumes, mhi_volumes):
         sequences = None
-        # empty the ouput sequence for this upcoming cycle
-        self.output = []
+        # Want to retain the output on the gesture comparer if it was set manually in
+        # the dashboard (for viewing a light sequence for a certain gesture)
+        # Otherwise reset the output.
+        if self.gesture_comparer.gestures_locked and self.gesture_comparer.best_output:
+            self.output = self.gesture_sequence_mapper.map_sequences_to_rgb(
+                self.gesture_comparer.best_output
+            )
+        else:
+            # empty the ouput sequence for this upcoming cycle
+            self.output = []
+
         if len(self.global_gesture_sequences) == self.gesture_limit:
             self.gesture_limit_reached = True
         else:
@@ -153,13 +162,12 @@ class GesturePipelineRunner:
 
         self.current_frame += 1
 
-        # if we have a valid gesture sequence
         self.global_gesture_sequences = self.gesture_comparer.gesture_sequence_library
-        if sequences is not None:
-            print("Gesture Detected")
 
+        # if we have a valid gesture sequence
+        if sequences is not None and not self.gesture_comparer.gestures_locked:
+            print("Gesture Detected")
             # TODO make work for multiple people
-            # self.global_gesture_sequences.append(sequences[0])
             self.gesture_comparer.ingest_sequences(sequences=sequences)
             # if global_config["train_gesture_segmenter"]:
             #     self.display_gesture_explorer(sequences)
@@ -169,14 +177,16 @@ class GesturePipelineRunner:
             # prob want to make this output a person dict and then layer it
             # further down the road
             # TODO - adjust this to work with multiple people
-            self.output = self.gesture_sequence_mapper.map_sequences_to_rgb(
-                self.gesture_comparer.best_output
-            )
-            # TODO when ingesting sequences, we want to get back
-            # a sequence from the comparer that is the most similar
-            # sequence within a threshold and reweight the library
-            # then send that sequence to the sequence mapper and
-            # set the output
+            if self.gesture_comparer.best_output:
+                self.output = self.gesture_sequence_mapper.map_sequences_to_rgb(
+                    self.gesture_comparer.best_output
+                )
+        # Set the comparer's best output to none if we've locked gestures
+        # If a gesture is manually added to the best output from the dashboard
+        # it will be picked up from #process_cycle here and stay in this loop
+        # to be sequenced and then removed here.
+        if self.gesture_comparer.gestures_locked and self.gesture_comparer.best_output:
+            self.gesture_comparer.best_output = None
         self.gesture_comparer.process_cycle()
 
     def display_gesture_explorer(self, sequences):

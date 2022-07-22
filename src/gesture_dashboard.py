@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import time
 
 from src import utils
 from global_config import global_config
@@ -11,6 +12,8 @@ class GestureDashboard:
         self.mouse_pos = (None, None)
         self.gesture_comparer = None
         self.name = "Gesture Dashboard"
+        self.sequence_card_coord_map = {}
+        self.mouse_down = None  # mac os x is weird with open cv / double click - using this var to debounce
 
     def set_comparer_instance(self, gesture_comparer):
         self.gesture_comparer = gesture_comparer
@@ -98,16 +101,37 @@ class GestureDashboard:
             )
             # if we're on the candidate sequence
             # draw a rectangle to distingish
+            h, w = out.shape
             if i == 0:
-                h, w = out.shape
                 out = cv2.rectangle(out, (4, 4), (w - 4, h - 4), 127, 4)
             elif similarity_sequence:
-                h, w = out.shape
                 out = cv2.rectangle(out, (4, 4), (w - 4, h - 4), 255, 4)
 
+            # top left (x, y), top right, bottom left, bottom right
+            self.sequence_card_coord_map[i] = {
+                "top_left": (i * w, 0),
+                "top_right": ((i * w) + w, 0),
+                "bottom_left": (i * w, h),
+                "bottom_right": ((i * w) + w, h),
+            }
             frames.append(out)
 
         view = np.concatenate(frames, axis=1)
+        h, w = view.shape
+        lock_text = None
+        lock_color = None
+        if self.gesture_comparer.gestures_locked:
+            lock_text = "Unlock Gestures"
+            lock_color = 0
+        else:
+            lock_text = "Lock Gestures"
+            lock_color = 50
+        self.lock_button_coords = [(0, h), (150, h - 100)]
+
+        view = cv2.rectangle(
+            view, self.lock_button_coords[0], self.lock_button_coords[1], lock_color, -1
+        )
+        view = utils.put_text(view, lock_text, (5, h - 10), 255)
         if self.mouse_pos[0] and self.mouse_pos[1]:
             view = cv2.circle(view, self.mouse_pos, 15, 127, -1)
         utils.display_image(
@@ -120,6 +144,67 @@ class GestureDashboard:
         else:
             self.sequence_viewer_counter += 1
 
+    def mouse_over_sequence(self):
+        x, y = self.mouse_pos
+        for seq, coords in self.sequence_card_coord_map.items():
+            if (
+                x is not None
+                and y is not None
+                and (
+                    x >= coords["top_left"][0]
+                    and x <= coords["top_right"][0]
+                    and y >= coords["top_left"][1]
+                    and y <= coords["bottom_left"][1]
+                )
+            ):
+                return seq
+
+    def mouse_over_lock_sequence_button(self):
+        x, y = self.mouse_pos
+        if (
+            x >= self.lock_button_coords[0][0]
+            and x <= self.lock_button_coords[1][0]
+            and y <= self.lock_button_coords[0][1]
+            and y >= self.lock_button_coords[1][1]
+        ):
+            return True
+        else:
+            return False
+
     def on_dashboard_event(self, event, x, y, flag, param):
         if event == cv2.EVENT_MOUSEMOVE:
             self.mouse_pos = (x, y)
+        if event == 1:  # EVENT_LBUTTONDOWN is 1
+            """
+            Click / Double click handling is behaving strangely.
+            However double clicks work on the regular mouse down event, but send events twice
+            So here's hack to debounce
+            """
+            if self.mouse_down is not None and time.time() - self.mouse_down < 100:
+                self.mouse_down = None
+                """
+                Do stuff here
+                """
+                # Lock / unlock the lock sequences button
+                if self.mouse_over_lock_sequence_button():
+                    if self.gesture_comparer.gestures_locked:
+                        self.gesture_comparer.gestures_locked = False
+                    else:
+                        self.gesture_comparer.gestures_locked = True
+                # Set the "best output" to the double-clicked sequence if gestures are locked
+                if self.mouse_over_sequence() >= 0:
+                    seq = self.mouse_over_sequence()
+                    if self.gesture_comparer.gestures_locked:
+                        if seq == 0:
+                            print(f"Lighting candidate sequence")
+                            self.gesture_comparer.best_output = (
+                                self.gesture_comparer.candidate_sequences
+                            )
+                        else:
+                            print(f"Lighting library sequence {seq-1}")
+                            self.gesture_comparer.best_output = (
+                                self.gesture_comparer.gesture_sequence_library[seq - 1]
+                            )
+
+            else:
+                self.mouse_down = time.time()

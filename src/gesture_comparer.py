@@ -21,6 +21,7 @@ class GestureComparer:
         self.candidate_sequences = None
         self.most_similar_sequence_index = None
         self.detected_gesture_count = 0
+        self.gestures_locked = False
 
         self.dashboard = GestureDashboard()
 
@@ -30,6 +31,8 @@ class GestureComparer:
         self.dashboard.display_dashboard()
 
     def ingest_sequences(self, sequences):
+        if self.gestures_locked or sequences is None:
+            return
         self.candidate_sequences = sequences
         self.detected_gesture_count += 1
         if len(self.gesture_sequence_library) < self.gesture_limit:
