@@ -33,4 +33,5 @@ global_config = {
     "load_saved_sequences_into_dashboard": True,
     "load_saved_sequences_name": "sequences-1658520618.366581",
     "saved_sequences_path": "saved_sequences/",
+    "view_light_sequence_plots": True,
 }

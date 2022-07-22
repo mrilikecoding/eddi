@@ -166,7 +166,7 @@ class GesturePipelineRunner:
 
         # if we have a valid gesture sequence
         if sequences is not None and not self.gesture_comparer.gestures_locked:
-            print("Gesture Detected")
+            print("New Gesture Detected")
             # TODO make work for multiple people
             self.gesture_comparer.ingest_sequences(sequences=sequences)
             # if global_config["train_gesture_segmenter"]:
