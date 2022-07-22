@@ -30,4 +30,7 @@ global_config = {
     "repeated_gesture_similarity_threshold": 7.0,  # upper bound of similarity score when selected a repeated gesture
     "weight_increase_factor": 1.5,  # how much to scale up the weight of a repeated gesture
     "weight_pruning_threshold": 0.18,  # when to drop off a gesture from library if the weights have been lowered enough
+    "load_saved_sequences_into_dashboard": True,
+    "load_saved_sequences_name": "sequences-1658520618.366581",
+    "saved_sequences_path": "saved_sequences/",
 }
