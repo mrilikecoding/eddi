@@ -1,4 +1,9 @@
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
+
+from global_config import global_config
 
 
 class GestureAestheticSequenceMapper:
@@ -14,6 +19,7 @@ class GestureAestheticSequenceMapper:
             "front",
             "middle",
         ]
+        self.show_plots = global_config["view_light_sequence_plots"]
 
     def normalize_point(
         self, x, min_x, max_x, min_target, max_target, return_boundary=False
@@ -51,6 +57,9 @@ class GestureAestheticSequenceMapper:
 
     def compute_sequence_section_mean(self, sequence):
         return [np.mean(frame) for frame in sequence]
+
+    def compute_sequence_section_std(self, sequence):
+        return [np.std(frame) for frame in sequence]
 
     def map_sequences_to_rgb(self, sequences):
         """
@@ -98,6 +107,9 @@ class GestureAestheticSequenceMapper:
             "middle": mhi_middle,
         }
 
+        if self.show_plots:
+            self.plot_sequences(partitions)
+
         partition_mean_sequences = {
             key: self.compute_sequence_section_mean(partition)
             for key, partition in partitions.items()
@@ -120,3 +132,33 @@ class GestureAestheticSequenceMapper:
         # TODO what to do with RGB
 
         return spatial_sequence_frames
+
+    def plot_sequences(self, partitions):
+        sns.set_theme(style="darkgrid")
+        plt.title("Sequence")
+        partition_std_sequences = {
+            key: self.compute_sequence_section_std(partition)
+            for key, partition in partitions.items()
+        }
+        partition_mean_sequences = {
+            key: self.compute_sequence_section_mean(partition)
+            for key, partition in partitions.items()
+        }
+
+        sequence_data = pd.DataFrame(
+            {
+                # "middle_std": partition_std_sequences["middle"],
+                # "top_std": partition_std_sequences["top"],
+                # "bottom_std": partition_std_sequences["bottom"],
+                "right_std": partition_std_sequences["right"],
+                "left_std": partition_std_sequences["left"],
+                # "middle_mean": partition_mean_sequences["middle"],
+                # "top_mean": partition_mean_sequences["top"],
+                # "bottom_mean": partition_mean_sequences["bottom"],
+                "right_mean": partition_mean_sequences["right"],
+                "left_mean": partition_mean_sequences["left"],
+            }
+        )
+
+        sns.lineplot(data=sequence_data)
+        plt.show()
