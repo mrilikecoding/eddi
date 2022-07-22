@@ -1,6 +1,8 @@
 import math
 import cv2
 import numpy as np
+import pickle
+import os
 
 
 def display_image(
@@ -112,3 +114,19 @@ def compute_hu_moments(img):
             -1 * math.copysign(1.0, hu_moments[i]) * safe_log10(abs(hu_moments[i]))
         )
     return hu_moments
+
+
+# write data to binary file
+def write_data(location, data, name):
+    # store list in binary file so 'wb' mode
+    with open(os.path.join(location, name), "wb") as fp:
+        pickle.dump(data, fp)
+        print(f"Saved {name} to {location}")
+
+
+# Read data to memory
+def read_data(location, name):
+    # for reading also binary mode is important
+    with open(os.path.join(location, name), "rb") as fp:
+        data = pickle.load(fp)
+        return data
