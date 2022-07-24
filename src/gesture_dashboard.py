@@ -234,7 +234,9 @@ class GestureDashboard:
     def mouse_over_lock_sequence_button(self):
         x, y = self.mouse_pos
         if (
-            x >= self.lock_button_coords[0][0]
+            x is not None
+            and y is not None
+            and x >= self.lock_button_coords[0][0]
             and x <= self.lock_button_coords[1][0]
             and y <= self.lock_button_coords[0][1]
             and y >= self.lock_button_coords[1][1]
@@ -246,7 +248,9 @@ class GestureDashboard:
     def mouse_over_save_sequence_button(self):
         x, y = self.mouse_pos
         if (
-            x >= self.save_button_coords[0][0]
+            x is not None
+            and y is not None
+            and x >= self.save_button_coords[0][0]
             and x <= self.save_button_coords[1][0]
             and y <= self.save_button_coords[0][1]
             and y >= self.save_button_coords[1][1]
