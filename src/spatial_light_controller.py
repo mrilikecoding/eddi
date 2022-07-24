@@ -1,10 +1,12 @@
 import json
+import numpy as np
 
 from global_config import global_config
 from src.controller import Controller
 from src.fuzzy_joint_tracker import FuzzyJointTracker
 from src.mhi import MotionHistoryImager
 from src.gesture_pipeline_runner import GesturePipelineRunner
+from src.pattern_sequence_mapper import PatternSequenceMapper
 from src.sequencer import Sequencer
 
 
@@ -44,6 +46,9 @@ class SpatialLightController(Controller):
         self.send_channel_message = send_channel_message
         self.sequencer = Sequencer()
 
+        # Generic Pattern Sequence Mapper (for background textures etc)
+        self.pattern_sequence_mapper = PatternSequenceMapper()
+
         # Gesture Pipeline Initialization
         # track global gesture state in this class
         self.gesture_pipeline = GesturePipelineRunner(
@@ -64,6 +69,7 @@ class SpatialLightController(Controller):
         )
 
         self.input_processing_pipeline = [
+            self.pattern_sequence_mapper,
             self.fuzzy_tracker,
             self.motion_history_imager,
         ]
@@ -78,10 +84,11 @@ class SpatialLightController(Controller):
         to start the process. Then the client calls the #send_next_frame_values_to_devices
         to pull values off the sequencer and send to the output devices
         """
+        outputs = []
         for node in self.input_processing_pipeline:
             node.process_input_device_values(input_object_instance)
             if len(node.output):
-                self.sequencer.add_sequence_to_queue(node.output)
+                outputs.append((node.output, node.weight))
 
         # motion history imager processes volume of mei and mhi images as well as their diff
         # NOTE - these volumes operate as a FIFO array of images of length frame_window_length
@@ -97,7 +104,22 @@ class SpatialLightController(Controller):
             mhi_volumes,
         )
         if self.gesture_pipeline.output and len(self.gesture_pipeline.output):
-            self.sequencer.add_sequence_to_queue(self.gesture_pipeline.output)
+            outputs.append((self.gesture_pipeline.output, self.gesture_pipeline.weight))
+
+        # weight each output sequence value according to its weight and number of competing sequences
+        weights = [output[1] for output in outputs]
+        eps = 1e-10
+        normalizer = np.sum(weights) + eps
+        for i, output in enumerate(outputs):
+            seq = output[0]
+            for j, frame in enumerate(seq):
+                for k, v in frame.items():
+                    outputs[i][0][j][k] = tuple(
+                        [x * (weights[i] / normalizer) for x in v]
+                    )
+
+        for output in outputs:
+            self.sequencer.add_sequence_to_queue(output[0])
 
     def send_next_frame_values_to_devices(self):
         # get the next column of values in queue

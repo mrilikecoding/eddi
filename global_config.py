@@ -1,4 +1,13 @@
 global_config = {
+    # how much from 0-1 should this sequencer influence the lights when layering in other sequences
+    # 0 means this output will not be present when competing with other sequencers
+    # 1 means this outout will be out 1/(number of other sequences layered in)
+    # these values will be added and normalized between 0-1
+    "output_weights": {
+        "fuzzy_tracker": 0.5,
+        "pattern_sequencer": 0.2,
+        "gesture_pipeline": 1.0,
+    },
     # The default min/max x,y,z input values
     # TODO if the space is partitioned differently or hierarchically,
     # these will need to be set in spatial device config - prob makes sense to do that

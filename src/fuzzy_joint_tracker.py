@@ -1,4 +1,5 @@
 from src.pipeline_node import PipelineNode
+from global_config import global_config
 
 
 class FuzzyJointTracker(PipelineNode):
@@ -7,6 +8,7 @@ class FuzzyJointTracker(PipelineNode):
         min_max_dimensions,
     ):
         self.space_joint_to_track = "head"
+        self.weight = global_config["output_weights"]["fuzzy_tracker"]
         # for normalizing fuzzy values against min / max dimensions
         # set the max bounds based on incoming data
         self.self_calibrate = False

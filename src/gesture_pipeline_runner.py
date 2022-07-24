@@ -19,6 +19,7 @@ class GesturePipelineRunner:
         frame_window_length=75,
         display_info=False,
     ):
+        self.weight = global_config["output_weights"]["gesture_pipeline"]
         self.display_capture_gestures = display_captured_gestures
         self.energy_diff_gesture_sequences = {}
         self.MEI_gesture_sequences = {}
