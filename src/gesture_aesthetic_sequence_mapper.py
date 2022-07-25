@@ -2,6 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
+import cv2
+from scipy.stats import kurtosis
+from scipy.stats import skew
+from skimage import color
 
 from global_config import global_config
 
@@ -61,6 +65,9 @@ class GestureAestheticSequenceMapper:
     def compute_sequence_section_std(self, sequence):
         return [np.std(frame) for frame in sequence]
 
+    def compute_sequence_section_skew(self, sequence):
+        return [skew(frame, axis=None) for frame in sequence]
+
     def map_sequences_to_rgb(self, sequences):
         """
         params:
@@ -110,8 +117,9 @@ class GestureAestheticSequenceMapper:
         if self.show_plots:
             self.plot_sequences(partitions)
 
-        partition_mean_sequences = {
-            key: self.compute_sequence_section_mean(partition)
+        # TODO - so the section values are not smooth between regions. Intensity maybe, but not hue or saturation. Need to make smooth curves somehow...
+        partition_sequences = {
+            key: self.compute_sequence_section_values(partition)
             for key, partition in partitions.items()
         }
 
@@ -120,18 +128,91 @@ class GestureAestheticSequenceMapper:
             spatial_sequence_frames.append(
                 {
                     position: (
-                        self.normalize_point(sequence[i], 0, 255, 0, 1),
-                        0.01,
-                        # self.normalize_point(sequence[i], 0, 255, 0, 1),
-                        0.01
-                        # self.normalize_point(sequence[i], 0, 255, 0, 1),
+                        sequence["r"][i],
+                        sequence["g"][i],
+                        sequence["b"][i],
                     )
-                    for position, sequence in partition_mean_sequences.items()
+                    for position, sequence in partition_sequences.items()
                 }
             )
-        # TODO what to do with RGB
 
         return spatial_sequence_frames
+
+    def compute_sequence_section_values(self, partition):
+        """
+        Here's goes some funky stuff - relatively arbitrary aesthetic choices based on statistical properties
+        of the mhi images partitioned by region
+        """
+        # intepolate values in lab space
+        # L: 0 to 100, a: -127 to 128, b: -128 to 127.
+        skew_values = self.compute_sequence_section_skew(partition)
+        std_values = self.compute_sequence_section_std(partition)
+        mean_values = self.compute_sequence_section_mean(partition)
+        # To start, let's try
+        # ch1 Lab L (lightness) or HSV Hue as a min max interpolation of the regional skew
+        # ch2 Lab A(red->green pole) or HSV Saturation as a min max interpolation of the regional mean
+        # ch3 Lab B(yellow->blue pole) or HSV Value as a min max interpolation of the regional std
+        # or we can try HSV - OPENCV HSV is [0-180, 0-255, 0-255]
+        # TODO incorporate weights as a modifier along some dimension
+        ch1 = np.array(
+            [
+                #     self.normalize_point(
+                #         value, np.min(skew_values), np.max(skew_values), 0, 180
+                #     )
+                value
+                for value in mean_values
+            ]
+        ).astype(np.uint8)
+        ch2 = np.array(
+            [
+                # self.normalize_point(
+                #     value, np.min(mean_values), np.max(mean_values), 0, 255
+                # )
+                value
+                for value in mean_values
+            ]
+        ).astype(np.uint8)
+        ch3 = np.array(
+            [
+                # self.normalize_point(
+                #     value, np.min(std_values), np.max(std_values), 0, 255
+                # )
+                value
+                for value in mean_values
+            ]
+        ).astype(np.uint8)
+        # then convert to rgb
+        values = np.array(
+            [
+                cv2.cvtColor(
+                    np.array([[[ch1[i], ch2[i], ch3[i]]]]).astype(np.uint8),
+                    cv2.COLOR_HSV2RGB,
+                ).flatten()
+                for i in range(len(ch1))
+            ]
+        )
+
+        if self.plot_sequences:
+            self.plot_values(values)
+
+        return {
+            "r": values[:, 0],
+            "g": values[:, 1],
+            "b": values[:, 2],
+        }
+
+    def plot_values(self, values):
+        sns.set_theme(style="darkgrid")
+        plt.title("Values")
+        sequence_data = pd.DataFrame(
+            {
+                "r": values[:, 0],
+                "g": values[:, 1],
+                "b": values[:, 2],
+            }
+        )
+        sns.lineplot(data=sequence_data)
+        plt.show()
 
     def plot_sequences(self, partitions):
         sns.set_theme(style="darkgrid")
@@ -144,19 +225,25 @@ class GestureAestheticSequenceMapper:
             key: self.compute_sequence_section_mean(partition)
             for key, partition in partitions.items()
         }
+        partition_skew_sequences = {
+            key: self.compute_sequence_section_skew(partition)
+            for key, partition in partitions.items()
+        }
 
         sequence_data = pd.DataFrame(
             {
                 # "middle_std": partition_std_sequences["middle"],
                 # "top_std": partition_std_sequences["top"],
                 # "bottom_std": partition_std_sequences["bottom"],
+                "right_mean": partition_mean_sequences["right"],
+                "left_mean": partition_mean_sequences["left"],
                 "right_std": partition_std_sequences["right"],
                 "left_std": partition_std_sequences["left"],
+                "right_skew": partition_skew_sequences["right"],
+                "left_skew": partition_skew_sequences["left"],
                 # "middle_mean": partition_mean_sequences["middle"],
                 # "top_mean": partition_mean_sequences["top"],
                 # "bottom_mean": partition_mean_sequences["bottom"],
-                "right_mean": partition_mean_sequences["right"],
-                "left_mean": partition_mean_sequences["left"],
             }
         )
 
