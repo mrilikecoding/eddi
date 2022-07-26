@@ -1,3 +1,4 @@
+from asyncio import constants
 import numpy as np
 from global_config import global_config
 from src.pipeline_node import PipelineNode
@@ -22,19 +23,35 @@ class PatternSequenceMapper(PipelineNode):
     def __init__(self):
         self.counter = 0
         self.weight = global_config["output_weights"]["pattern_sequencer"]
-        self.modulator_value = 200
-        self.samples = np.linspace(-1, 1, int(self.modulator_value), endpoint=False)
+        self.modulator_value = 100
+        # self.samples = np.linspace(-1.0, 1.0, int(self.modulator_value), endpoint=False)
+        self.samples = np.linspace(
+            0.25, 0.75, int(self.modulator_value), endpoint=False
+        )
+        self.mode = global_config["pattern_sequencer"]["mode"]
 
     def process_input_device_values(self, input_device_instance=None):
-        out_value = 1 - np.abs(self.samples[int(self.counter % self.modulator_value)])
-        out_value2 = np.abs(self.samples[int(self.counter % self.modulator_value)])
-        back = out_value
-        front = out_value2
-        bottom = out_value
-        top = out_value2
-        right = out_value
-        left = out_value2
-        middle = out_value
+        if self.mode == "static":
+            constant = 0.4
+            front = constant
+            back = constant
+            middle = constant
+            top = constant
+            bottom = constant
+            left = constant
+            right = constant
+        elif self.mode == "oscillator":
+            out_value = 1 - np.abs(
+                self.samples[int(self.counter % self.modulator_value)]
+            )
+            out_value2 = np.abs(self.samples[int(self.counter % self.modulator_value)])
+            back = out_value
+            front = out_value2
+            bottom = out_value
+            top = out_value2
+            right = out_value
+            left = out_value2
+            middle = out_value
         output = {
             "back": (back, back, back),
             "front": (front, front, front),
