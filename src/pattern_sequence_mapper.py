@@ -133,7 +133,7 @@ class PatternSequenceMapper(PipelineNode):
         elif self.color_mode == "lava":
             out = value * 0.05
         elif self.color_mode == "sunshine":
-            out = value * 0.e
+            out = value * 0.10
         else:
             return self.constrain(value)
         return self.constrain(out)
