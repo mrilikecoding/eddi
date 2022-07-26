@@ -3,9 +3,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 import cv2
-from scipy.stats import kurtosis
 from scipy.stats import skew
-from skimage import color
+from src import utils
 
 from global_config import global_config
 
@@ -55,10 +54,6 @@ class GestureAestheticSequenceMapper:
         """Return right half of sequence"""
         return np.copy(sequence[:, :, int(w / 2) :])
 
-    def slice_middle(self, sequence, h):
-        """Return middle vertical of sequence"""
-        return np.copy(sequence[:, int(h / 3) : int(2 * (h / 3)), :])
-
     def compute_sequence_section_mean(self, sequence):
         return [np.mean(frame) for frame in sequence]
 
@@ -75,10 +70,11 @@ class GestureAestheticSequenceMapper:
             'MEI' : nd.array shape = num_frames * h * w - eg (44, 278, 400)
             'MHI': nd.array shape = num_frames * h * w
             'energy_diff': nd.array shape = num_frames*h*w
-            'meta': { 'at_frame': x, 'at_cycle': x, 'idxs' {0 : (s, e), 'energy': x, 'person_id': x}}
+            'meta': { 'at_frame': x, 'at_cycle': x, 'idxs' {0 : (s, e), 'energy': x, 'person_id': x, ...}}
         }
 
         returns a list of spatially defined sequence frames
+        NOTE - normalize r g b to values between 0-1
         [{
             "back": (r, g, b),
             "front": (r, g, b),
@@ -105,32 +101,37 @@ class GestureAestheticSequenceMapper:
         mhi_bottom = self.slice_bottom(mhi, h)
         mhi_left = self.slice_left(mhi, w)
         mhi_right = self.slice_right(mhi, w)
-        mhi_middle = self.slice_middle(mhi, h)
         partitions = {
             "top": mhi_top,
             "bottom": mhi_bottom,
             "left": mhi_left,
             "right": mhi_right,
-            "middle": mhi_middle,
         }
-
-        if self.show_plots:
-            self.plot_sequences(partitions)
 
         # TODO - so the section values are not smooth between regions. Intensity maybe, but not hue or saturation. Need to make smooth curves somehow...
         partition_sequences = {
-            key: self.compute_sequence_section_values(partition)
+            key: self.compute_sequence_section_values(partition, sequences["meta"])
             for key, partition in partitions.items()
         }
 
+        if self.show_plots:
+            self.plot_data(
+                {
+                    "sequences": sequences,
+                    "partitions": partitions,
+                    "partition_sequences": partition_sequences,
+                }
+            )
+
         spatial_sequence_frames = []
+        # note - make sure to normalize these values to 0-1
         for i in range(frame_count):
             spatial_sequence_frames.append(
                 {
                     position: (
-                        sequence["r"][i],
-                        sequence["g"][i],
-                        sequence["b"][i],
+                        utils.normalize_point(sequence["r"][i], 0, 255, 0, 1),
+                        utils.normalize_point(sequence["g"][i], 0, 255, 0, 1),
+                        utils.normalize_point(sequence["b"][i], 0, 255, 0, 1),
                     )
                     for position, sequence in partition_sequences.items()
                 }
@@ -138,11 +139,13 @@ class GestureAestheticSequenceMapper:
 
         return spatial_sequence_frames
 
-    def compute_sequence_section_values(self, partition):
+    def compute_sequence_section_values(self, partition, meta):
         """
         Here's goes some funky stuff - relatively arbitrary aesthetic choices based on statistical properties
         of the mhi images partitioned by region
         """
+        weight = meta.get("weight") or 1.0
+        energy = meta.get("energy") or 3.0
         # intepolate values in lab space
         # L: 0 to 100, a: -127 to 128, b: -128 to 127.
         skew_values = self.compute_sequence_section_skew(partition)
@@ -154,12 +157,27 @@ class GestureAestheticSequenceMapper:
         # ch3 Lab B(yellow->blue pole) or HSV Value as a min max interpolation of the regional std
         # or we can try HSV - OPENCV HSV is [0-180, 0-255, 0-255]
         # TODO incorporate weights as a modifier along some dimension
+        print("Energy", meta.get("energy"))
+        print("Weight", meta.get("weight"))
+        min_energy = global_config["gesture_heuristics"]["min_energy_threshold"]
+        max_energy = global_config["gesture_heuristics"]["max_energy_threshold"]
+        hue = int(
+            self.normalize_point(
+                energy, min_energy, max_energy, 0, 180, return_boundary=True
+            )
+        )
+        saturation = int(
+            self.normalize_point(weight, 0, 1, 0, 255, return_boundary=True)
+        )
+        value_scalar = 1.0
+        saturation_value_scalar = 2.0
+        saturation = saturation * saturation_value_scalar
         ch1 = np.array(
             [
-                #     self.normalize_point(
-                #         value, np.min(skew_values), np.max(skew_values), 0, 180
-                #     )
-                value
+                # self.normalize_point(
+                #     value, np.min(mean_values), np.max(mean_values), 0, 180
+                # )
+                int(hue)
                 for value in mean_values
             ]
         ).astype(np.uint8)
@@ -167,20 +185,27 @@ class GestureAestheticSequenceMapper:
             [
                 # self.normalize_point(
                 #     value, np.min(mean_values), np.max(mean_values), 0, 255
-                # )
-                value
+                # ) * weight
+                saturation
                 for value in mean_values
             ]
         ).astype(np.uint8)
-        ch3 = np.array(
-            [
-                # self.normalize_point(
-                #     value, np.min(std_values), np.max(std_values), 0, 255
-                # )
-                value
-                for value in mean_values
-            ]
-        ).astype(np.uint8)
+        ch3 = self.smooth(
+            np.array(
+                [
+                    self.normalize_point(
+                        value * value_scalar,
+                        np.min(mean_values),
+                        np.max(mean_values),
+                        0,
+                        255,
+                        return_boundary=True,
+                    )
+                    for value in mean_values
+                ]
+            ).astype(np.uint8),
+            5,
+        )
         # then convert to rgb
         values = np.array(
             [
@@ -192,31 +217,26 @@ class GestureAestheticSequenceMapper:
             ]
         )
 
-        if self.plot_sequences:
-            self.plot_values(values)
-
         return {
             "r": values[:, 0],
             "g": values[:, 1],
             "b": values[:, 2],
         }
 
-    def plot_values(self, values):
-        sns.set_theme(style="darkgrid")
-        plt.title("Values")
-        sequence_data = pd.DataFrame(
-            {
-                "r": values[:, 0],
-                "g": values[:, 1],
-                "b": values[:, 2],
-            }
-        )
-        sns.lineplot(data=sequence_data)
-        plt.show()
+    def smooth(self, y, box_pts):
+        # https://stackoverflow.com/questions/20618804/how-to-smooth-a-curve-in-the-right-way
+        box = np.ones(box_pts) / box_pts
+        y_smooth = np.convolve(y, box, mode="same")
+        return y_smooth.astype(np.uint8)
 
-    def plot_sequences(self, partitions):
+    def plot_data(self, data):
+        sequences = data["sequences"]
+        partitions = data["partitions"]
+        partition_sequences = data["partition_sequences"]
         sns.set_theme(style="darkgrid")
-        plt.title("Sequence")
+        # plt.title("Values")
+
+        plt.title("Sequence Regions RGB")
         partition_std_sequences = {
             key: self.compute_sequence_section_std(partition)
             for key, partition in partitions.items()
@@ -225,27 +245,68 @@ class GestureAestheticSequenceMapper:
             key: self.compute_sequence_section_mean(partition)
             for key, partition in partitions.items()
         }
-        partition_skew_sequences = {
-            key: self.compute_sequence_section_skew(partition)
-            for key, partition in partitions.items()
-        }
 
         sequence_data = pd.DataFrame(
             {
-                # "middle_std": partition_std_sequences["middle"],
+                "top_r": partition_sequences["top"]["r"],
+                "top_g": partition_sequences["top"]["g"],
+                "top_b": partition_sequences["top"]["b"],
+                "bottom_r": partition_sequences["bottom"]["r"],
+                "bottom_g": partition_sequences["bottom"]["g"],
+                "bottom_b": partition_sequences["bottom"]["b"],
+                "left_r": partition_sequences["left"]["r"],
+                "left_g": partition_sequences["left"]["g"],
+                "left_b": partition_sequences["left"]["b"],
+                "right_r": partition_sequences["right"]["r"],
+                "right_b": partition_sequences["right"]["b"],
+                "right_g": partition_sequences["right"]["g"],
                 # "top_std": partition_std_sequences["top"],
                 # "bottom_std": partition_std_sequences["bottom"],
                 "right_mean": partition_mean_sequences["right"],
                 "left_mean": partition_mean_sequences["left"],
-                "right_std": partition_std_sequences["right"],
-                "left_std": partition_std_sequences["left"],
-                "right_skew": partition_skew_sequences["right"],
-                "left_skew": partition_skew_sequences["left"],
-                # "middle_mean": partition_mean_sequences["middle"],
-                # "top_mean": partition_mean_sequences["top"],
-                # "bottom_mean": partition_mean_sequences["bottom"],
+                # "right_std": partition_std_sequences["right"],
+                # "left_std": partition_std_sequences["left"],
+                "top_mean": partition_mean_sequences["top"],
+                "bottom_mean": partition_mean_sequences["bottom"],
             }
         )
 
-        sns.lineplot(data=sequence_data)
+        sns.lineplot(data=sequence_data["top_r"], color="red", linestyle="--")
+        sns.lineplot(data=sequence_data["top_g"], color="green", linestyle="--")
+        sns.lineplot(data=sequence_data["top_b"], color="blue", linestyle="--")
+        sns.lineplot(data=sequence_data["bottom_r"], color="red", linestyle=":")
+        sns.lineplot(data=sequence_data["bottom_g"], color="green", linestyle=":")
+        sns.lineplot(data=sequence_data["bottom_b"], color="blue", linestyle=":")
+        sns.lineplot(data=sequence_data["left_r"], color="red", linestyle="-")
+        sns.lineplot(data=sequence_data["left_g"], color="green", linestyle="-")
+        sns.lineplot(data=sequence_data["left_b"], color="blue", linestyle="-")
+        sns.lineplot(data=sequence_data["right_r"], color="red", linestyle="-.")
+        sns.lineplot(data=sequence_data["right_g"], color="green", linestyle="-.")
+        sns.lineplot(data=sequence_data["right_b"], color="blue", linestyle="-.")
+        # sns.lineplot(data=sequence_data["right_mean"], color="purple", linestyle=":")
+        # sns.lineplot(data=sequence_data["left_mean"], color="orange", linestyle=":")
+        # sns.lineplot(data=sequence_data["top_mean"], color="yellow", linestyle=":")
+        # sns.lineplot(data=sequence_data["bottom_mean"], color="pink", linestyle=":")
+        plt.legend(
+            labels=[
+                "T r",
+                "T g",
+                "T b",
+                "B r",
+                "B g",
+                "B b",
+                "L r",
+                "L g",
+                "L b",
+                "R r",
+                "R g",
+                "R b",
+                # "right mean",
+                # "left mean",
+                # "top mean",
+                # "bottom mean",
+            ],
+            title="Channel Values",
+        )
         plt.show()
+        return sequence_data

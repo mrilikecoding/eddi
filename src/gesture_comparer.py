@@ -37,8 +37,6 @@ class GestureComparer:
         self.detected_gesture_count += 1
         if len(self.gesture_sequence_library) < self.gesture_limit:
             self.most_similar_sequence_index = None
-            # store a placeholder weight in the output sequence 
-            sequences["meta"]["weight"] = -1
             self.gesture_sequence_library.append(sequences)
             self.best_output = sequences
             if len(self.weights) == 0:
@@ -64,12 +62,17 @@ class GestureComparer:
                 )
                 self.update_gesture_weights(most_similar_idx)
                 # store the current weight on in the output meta
-                self.gesture_sequence_library[most_similar_idx]["meta"]["weight"] = self.weights[most_similar_idx]
+                self.gesture_sequence_library[most_similar_idx]["meta"][
+                    "weight"
+                ] = self.weights[most_similar_idx]
                 self.best_output = self.gesture_sequence_library[most_similar_idx]
             else:
                 self.most_similar_sequence_index = None
                 self.best_output = None
         self.prune_low_weights()
+        # Store latest weights in sequence meta
+        for i, s in enumerate(self.gesture_sequence_library):
+            s["meta"]["weight"] = self.weights[i]
 
     def compute_similarity(self, sequences):
         """

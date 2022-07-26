@@ -60,6 +60,7 @@ class Lumi:
         """
         device = self.output_registry[device_name]
         try:
+            value = float(value)
             self.client.send_message(
                 device.osc_addr_prefix + "/" + device.name + channel_name, value
             )

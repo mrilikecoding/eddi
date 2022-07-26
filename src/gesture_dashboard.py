@@ -281,10 +281,11 @@ class GestureDashboard:
                         # no longer load data - however, we'll set our current
                         # comparer instance to the loaded data so we continue
                         # seamlessly
-                        self.gesture_comparer = self.loaded_data[
-                            "gesture_comparer_instance"
-                        ]
-                        self.override_data_load = True
+                        if global_config["load_saved_sequences_into_dashboard"]:
+                            self.gesture_comparer = self.loaded_data[
+                                "gesture_comparer_instance"
+                            ]
+                            self.override_data_load = True
                     else:
                         self.gesture_comparer.gestures_locked = True
                 # Set the "best output" to the double-clicked sequence if gestures are locked
