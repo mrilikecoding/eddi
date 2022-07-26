@@ -1,13 +1,14 @@
 global_config = {
-    "fuzzy_tracker": {"enabled": True},
+    "fuzzy_tracker": {"enabled": False},
     "pattern_sequencer": {
         "enabled": True,
         # "sequence_mode": "static",
         # "sequence_mode": "oscillator1", # THIS ONE IS BROKEN
-        "sequence_mode": "oscillator2",
+        # "sequence_mode": "oscillator2",
+        "sequence_mode": "perlin",
         # "color_mode": "default",
-        "color_mode": "ocean",
-        # "color_mode": "lava",
+        # "color_mode": "ocean",
+        "color_mode": "lava",
     },
     # how much from 0-1 should this sequencer influence the lights when layering in other sequences
     # 0 means this output will not be present when competing with other sequencers
