@@ -1,5 +1,4 @@
 import json
-import numpy as np
 
 from global_config import global_config
 from src.controller import Controller
@@ -68,11 +67,12 @@ class SpatialLightController(Controller):
             display_canvas=global_config["display_mhi_canvas"],
         )
 
-        self.input_processing_pipeline = [
-            self.pattern_sequence_mapper,
-            self.fuzzy_tracker,
-            self.motion_history_imager,
-        ]
+        self.input_processing_pipeline = []
+        if global_config["pattern_sequencer"]["enabled"]:
+            self.input_processing_pipeline.append(self.pattern_sequence_mapper)
+        if global_config["fuzzy_tracker"]["enabled"]:
+            self.input_processing_pipeline.append(self.fuzzy_tracker)
+        self.input_processing_pipeline.append(self.motion_history_imager)
 
     def process_input_device_values(self, input_object_instance):
         """
@@ -88,7 +88,7 @@ class SpatialLightController(Controller):
         for node in self.input_processing_pipeline:
             node.process_input_device_values(input_object_instance)
             if len(node.output):
-                outputs.append((node.output, node.weight))
+                outputs.append((node.output, node.weight, node.name))
 
         # motion history imager processes volume of mei and mhi images as well as their diff
         # NOTE - these volumes operate as a FIFO array of images of length frame_window_length
@@ -104,22 +104,16 @@ class SpatialLightController(Controller):
             mhi_volumes,
         )
         if self.gesture_pipeline.output and len(self.gesture_pipeline.output):
-            outputs.append((self.gesture_pipeline.output, self.gesture_pipeline.weight))
-
-        # weight each output sequence value according to its weight and number of competing sequences
-        weights = [output[1] for output in outputs]
-        eps = 1e-10
-        normalizer = np.sum(weights) + eps
-        for i, output in enumerate(outputs):
-            seq = output[0]
-            for j, frame in enumerate(seq):
-                for k, v in frame.items():
-                    outputs[i][0][j][k] = tuple(
-                        [x * (weights[i] / normalizer) for x in v]
-                    )
+            outputs.append(
+                (
+                    self.gesture_pipeline.output,
+                    self.gesture_pipeline.weight,
+                    self.gesture_pipeline.name,
+                )
+            )
 
         for output in outputs:
-            self.sequencer.add_sequence_to_queue(output[0])
+            self.sequencer.add_sequence_to_queue(output[0], output[1], output[2])
 
     def send_next_frame_values_to_devices(self):
         # get the next column of values in queue
@@ -190,9 +184,6 @@ class SpatialLightController(Controller):
                 r = self.output_devices[d].get_value("r")
                 g = self.output_devices[d].get_value("g")
                 b = self.output_devices[d].get_value("b")
-                r = r * value[0]
-                g = g * value[1]
-                b = b * value[2]
                 self.output_devices[d].set_value("r", r)
                 self.output_devices[d].set_value("g", g)
                 self.output_devices[d].set_value("b", b)
