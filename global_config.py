@@ -8,7 +8,8 @@ global_config = {
         "sequence_mode": "perlin",
         # "color_mode": "default",
         # "color_mode": "ocean",
-        "color_mode": "lava",
+        # "color_mode": "lava",
+        "color_mode": "sunshine",
     },
     # how much from 0-1 should this sequencer influence the lights when layering in other sequences
     # 0 means this output will not be present when competing with other sequencers

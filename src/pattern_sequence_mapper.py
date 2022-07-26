@@ -108,6 +108,8 @@ class PatternSequenceMapper(PipelineNode):
             out = value * 0.05
         elif self.color_mode == "lava":
             out = value * 1
+        elif self.color_mode == "sunshine":
+            out = value * 0.9
         else:
             out = value
         return self.constrain(out)
@@ -118,6 +120,8 @@ class PatternSequenceMapper(PipelineNode):
             out = value * 0.8
         elif self.color_mode == "lava":
             out = value * 0.10
+        elif self.color_mode == "sunshine":
+            out = value * 0.9
         else:
             out = value
         return self.constrain(out)
@@ -128,6 +132,8 @@ class PatternSequenceMapper(PipelineNode):
             out = value * 0.95
         elif self.color_mode == "lava":
             out = value * 0.05
+        elif self.color_mode == "sunshine":
+            out = value * 0.e
         else:
             return self.constrain(value)
         return self.constrain(out)
