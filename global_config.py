@@ -1,4 +1,8 @@
 global_config = {
+    "pattern_sequencer": {
+        "mode": "static",
+        # "mode": "oscillator"
+    },
     # how much from 0-1 should this sequencer influence the lights when layering in other sequences
     # 0 means this output will not be present when competing with other sequencers
     # 1 means this outout will be out 1/(number of other sequences layered in)
@@ -37,10 +41,10 @@ global_config = {
         "max_energy_threshold": 10.0,  # upper bound of gesture energy
     },
     "repeated_gesture_similarity_threshold": 7.0,  # upper bound of similarity score when selected a repeated gesture
-    "weight_increase_factor": 1.5,  # how much to scale up the weight of a repeated gesture
+    "weight_increase_factor": 2.5,  # how much to scale up the weight of a repeated gesture
     "weight_pruning_threshold": 0.18,  # when to drop off a gesture from library if the weights have been lowered enough
     "load_saved_sequences_into_dashboard": True,
-    "load_saved_sequences_name": "sequences-1658520618.366581",
+    "load_saved_sequences_name": "sequences-1658782988.753462",
     "saved_sequences_path": "saved_sequences/",
     "view_light_sequence_plots": True,
 }
