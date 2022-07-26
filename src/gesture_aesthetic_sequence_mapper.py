@@ -156,9 +156,8 @@ class GestureAestheticSequenceMapper:
         # ch2 Lab A(red->green pole) or HSV Saturation as a min max interpolation of the regional mean
         # ch3 Lab B(yellow->blue pole) or HSV Value as a min max interpolation of the regional std
         # or we can try HSV - OPENCV HSV is [0-180, 0-255, 0-255]
-        # TODO incorporate weights as a modifier along some dimension
-        print("Energy", meta.get("energy"))
-        print("Weight", meta.get("weight"))
+        # print("Energy", meta.get("energy"))
+        # print("Weight", meta.get("weight"))
         min_energy = global_config["gesture_heuristics"]["min_energy_threshold"]
         max_energy = global_config["gesture_heuristics"]["max_energy_threshold"]
         hue = int(
@@ -185,7 +184,7 @@ class GestureAestheticSequenceMapper:
             [
                 # self.normalize_point(
                 #     value, np.min(mean_values), np.max(mean_values), 0, 255
-                # ) * weight
+                # )
                 saturation
                 for value in mean_values
             ]
