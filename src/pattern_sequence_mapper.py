@@ -23,15 +23,25 @@ class PatternSequenceMapper(PipelineNode):
         self.counter = 0
         self.weight = global_config["output_weights"]["pattern_sequencer"]
         self.name = "pattern_sequencer"
-        self.modulator_value = 100
+        self.modulator_value = 50
         self.sequence_mode = global_config["pattern_sequencer"]["sequence_mode"]
+        self.amplitude = 0.3
         if self.sequence_mode == "oscillator1":
             self.samples = np.linspace(
-                0.25, 0.75, int(self.modulator_value), endpoint=False
+                self.amplitude,
+                1 - self.amplitude,
+                int(self.modulator_value),
+                endpoint=False,
             )
+            r = reversed(self.samples)
+            self.samples = list(r) + self.samples
+
         if self.sequence_mode == "oscillator2":
             self.samples = np.linspace(
-                -1.0, 1.0, int(self.modulator_value), endpoint=False
+                -self.amplitude,
+                self.amplitude,
+                int(self.modulator_value),
+                endpoint=False,
             )
         self.color_mode = global_config["pattern_sequencer"]["color_mode"]
 
@@ -57,22 +67,18 @@ class PatternSequenceMapper(PipelineNode):
             left = out_value
             middle = out_value
         elif self.sequence_mode == "oscillator2":
-            out_value = 1 - np.abs(
+            out_value = self.amplitude - np.abs(
                 self.samples[int(self.counter % self.modulator_value)]
             )
             out_value2 = np.abs(self.samples[int(self.counter % self.modulator_value)])
-            if out_value < 0:
-                out_value = 0.0
-            if out_value < 1.0:
-                out_value = 1.0
 
             back = out_value
             front = out_value2
-            bottom = out_value
-            top = out_value2
+            bottom = out_value2
+            top = out_value
             right = out_value
             left = out_value2
-            middle = out_value
+            middle = self.amplitude
         output = {
             "back": (self.mod_r(back), self.mod_g(back), self.mod_b(back)),
             "front": (self.mod_r(front), self.mod_g(front), self.mod_b(front)),

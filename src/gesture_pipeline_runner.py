@@ -4,6 +4,7 @@ import time
 
 from src.gesture_segmenter import GestureSegmenter
 from src.gesture_comparer import GestureComparer
+from src.viewpoints_comparer import ViewpointsComparer
 from src.gesture_aesthetic_sequence_mapper import GestureAestheticSequenceMapper
 from src import utils
 from global_config import global_config
@@ -50,7 +51,7 @@ class GesturePipelineRunner:
         self.sequence_viewer_counter = 0
 
         # initialize the interface for comparing new gestures with stored gestures
-        self.gesture_comparer = GestureComparer(gesture_limit=self.gesture_limit)
+        self.gesture_comparer = ViewpointsComparer(gesture_limit=self.gesture_limit)
         self.gesture_sequence_mapper = GestureAestheticSequenceMapper()
         # where to store a cycle's output sequence (accessed by #run_cycle caller)
         self.output = []

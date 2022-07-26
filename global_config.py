@@ -1,9 +1,9 @@
 global_config = {
-    "fuzzy_tracker": {"enabled": False},
+    "fuzzy_tracker": {"enabled": True},
     "pattern_sequencer": {
         "enabled": True,
         # "sequence_mode": "static",
-        # "sequence_mode": "oscillator1",- THIS ONE IS BROKEN
+        # "sequence_mode": "oscillator1", # THIS ONE IS BROKEN
         "sequence_mode": "oscillator2",
         # "color_mode": "default",
         "color_mode": "ocean",
@@ -50,8 +50,8 @@ global_config = {
     "repeated_gesture_similarity_threshold": 15.0,  # upper bound of similarity score when selected a repeated gesture
     "weight_increase_factor": 3.5,  # how much to scale up the weight of a repeated gesture
     "weight_pruning_threshold": 0.22,  # when to drop off a gesture from library if the weights have been lowered enough
-    "load_saved_sequences_name": "sequences-1658801207.781237",
-    "saved_sequences_path": "saved_sequences/",
-    "load_saved_sequences_into_dashboard": False,
-    "view_light_sequence_plots": False,
+    "load_saved_sequences_into_dashboard": True,  # load in a saved set of sequences from a gesture dashboard
+    "load_saved_sequences_name": "sequences-1658801207.781237",  # sequences from gesture dashboard
+    "saved_sequences_path": "saved_sequences/",  # path to sequence binaries
+    "view_light_sequence_plots": False,  # plot the rgb curves when replaying a gesture
 }
