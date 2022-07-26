@@ -62,6 +62,7 @@ void setup()
 
   // enable depth sensor
   kinect.enableDepth();
+  kinect.enableRGB();
 
   // enable skeleton generation for all joints
   kinect.enableUser();
@@ -116,7 +117,7 @@ int getSkeletonPositionKey(String position) {
 
 void draw(){
   background(0);
-  image(kinect.depthImage(),0,0);
+  image(kinect.rgbImage(),0,0);
   // update the camera
   kinect.update();
     
