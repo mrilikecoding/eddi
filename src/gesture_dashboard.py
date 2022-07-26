@@ -98,6 +98,22 @@ class GestureDashboard:
             energy = np.round(seq["meta"]["energy"], 4)
             d, h, w = mei.shape
             info_window = np.zeros((200, w)).astype(np.uint8) + 100
+            # add classifier buttons for sending pos/neg examples to folder
+            classifier_buttons = np.zeros((100, w)).astype(np.uint8)
+            classifier_buttons[:, 0 : int(w / 2)] = (
+                classifier_buttons[:, 0 : int(w / 2)] + 200
+            )
+            classifier_buttons = utils.put_text(
+                classifier_buttons, "Pos", (int(w / 4) - 15, 55)
+            )
+            classifier_buttons = utils.put_text(
+                classifier_buttons, "Neg", ((int(w / 4) * 3) - 15, 55)
+            )
+            # add border button
+            classifier_buttons[:, 0] = 255
+            classifier_buttons[0, :] = 255
+            classifier_buttons[-1, :] = 255
+            classifier_buttons[:, -1] = 255
             # if not looking at candidate sequence at first index
             if i > 0:
                 # subtract 1 from i accessing stored variables to account for candidate seq in this list
@@ -124,6 +140,7 @@ class GestureDashboard:
                         thickness=-1,
                     )
             else:
+                classifier_buttons = np.zeros((100, w)).astype(np.uint8) + 100
                 # for the candidate sequence...
                 info_window = utils.put_text(
                     info_window, "Candidate Sequence", (15, 20)
@@ -147,7 +164,9 @@ class GestureDashboard:
             else:
                 frame = mei[-1]
             frame = cv2.flip(frame, 1)
-            out = np.concatenate([frame, energy_mhi, info_window], axis=0)
+            out = np.concatenate(
+                [frame, energy_mhi, info_window, classifier_buttons], axis=0
+            )
             out = utils.put_text(
                 out,
                 f"{i}:std-{std}, e-{energy}, len-{len(mei)}",
@@ -170,6 +189,7 @@ class GestureDashboard:
                 "bottom_left": (i * w, h),
                 "bottom_right": ((i * w) + w, h),
             }
+            out[:, -1] = 255  # add border at end of each card
             frames.append(out)
 
         view = np.concatenate(frames, axis=1)
@@ -231,6 +251,28 @@ class GestureDashboard:
             ):
                 return seq
 
+    def mouse_over_sequence_classifier_button(self):
+        x, y = self.mouse_pos
+        for seq, coords in self.sequence_card_coord_map.items():
+            if seq == 0:
+                continue
+            elif (
+                x is not None
+                and y is not None
+                and (
+                    x >= coords["top_left"][0]
+                    and x <= coords["top_right"][0]
+                    and y >= coords["bottom_left"][1] - 100
+                    and y <= coords["bottom_left"][1]
+                )
+            ):
+                w = coords["top_right"][0] - coords["top_left"][0]
+                if x >= coords["top_left"][0] + int(w / 2):
+                    return (seq, "neg")
+                else:
+                    return (seq, "pos")
+        return (-1, None)
+
     def mouse_over_lock_sequence_button(self):
         x, y = self.mouse_pos
         if (
@@ -259,6 +301,27 @@ class GestureDashboard:
         else:
             return False
 
+    def save_labeled_sequence(self, label, sequence):
+        id = time.time()
+        if label == "pos":
+            outfile = (f"training/positive/pos_energy-{id}.jpg",)
+            cv2.imwrite(
+                str(outfile),
+                sequence["gesture_energy_matrix"],
+            )
+            with open(f"training/negative/pos_mhi_sequence-{id}.npy", "wb") as f:
+                np.save(f, sequence)
+            print(f"Saved Positive Sequence to {outfile}")
+        if label == "neg":
+            outfile = (f"training/negative/neg_energy-{id}.jpg",)
+            cv2.imwrite(
+                str(outfile),
+                sequence["gesture_energy_matrix"],
+            )
+            with open(f"training/negative/neg_mhi_sequence-{id}.npy", "wb") as f:
+                np.save(f, sequence)
+            print(f"Saved Negative Sequence to {outfile}")
+
     def on_dashboard_event(self, event, x, y, flag, param):
         if event == cv2.EVENT_MOUSEMOVE:
             self.mouse_pos = (x, y)
@@ -273,6 +336,16 @@ class GestureDashboard:
                 """
                 Do stuff here
                 """
+                # Classify seq as pos/neg (for now only save to file)
+                label_seq, label = self.mouse_over_sequence_classifier_button()
+                if label_seq >= 0:
+                    gc = None
+                    if global_config["load_saved_sequences_into_dashboard"]:
+                        gc = self.loaded_data["gesture_comparer_instance"]
+                    else:
+                        gc = self.gesture_comparer
+                    sequences = [gc.candidate_sequences] + gc.gesture_sequence_library
+                    self.save_labeled_sequence(label, sequences[label_seq])
                 # Lock / unlock the lock sequences button
                 if self.mouse_over_lock_sequence_button():
                     if self.gesture_comparer.gestures_locked:
@@ -300,8 +373,9 @@ class GestureDashboard:
                         f"sequences-{time.time()}",
                     )
                 # Set the "best output" to the double-clicked sequence if gestures are locked
-                if self.mouse_over_sequence() >= 0:
-                    seq = self.mouse_over_sequence()
+                mouse_over_seq = self.mouse_over_sequence()
+                if mouse_over_seq >= 0:
+                    seq = mouse_over_seq
                     if global_config["load_saved_sequences_into_dashboard"]:
                         gc = self.loaded_data["gesture_comparer_instance"]
                     else:
@@ -316,5 +390,8 @@ class GestureDashboard:
                                 gc.gesture_sequence_library[seq - 1]
                             )
 
+                """
+                Do stuff above here
+                """
             else:
                 self.mouse_down = time.time()
