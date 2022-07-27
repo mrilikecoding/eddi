@@ -85,10 +85,13 @@ class SpatialLightController(Controller):
         to pull values off the sequencer and send to the output devices
         """
         outputs = []
+        tracking_user = any(input_object_instance.tracking.values())
+        self.fuzzy_tracker.tracking = tracking_user
         for node in self.input_processing_pipeline:
             node.process_input_device_values(input_object_instance)
             if len(node.output):
                 outputs.append((node.output, node.weight, node.name))
+
 
         # motion history imager processes volume of mei and mhi images as well as their diff
         # NOTE - these volumes operate as a FIFO array of images of length frame_window_length

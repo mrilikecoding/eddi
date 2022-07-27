@@ -15,7 +15,7 @@ int userID;
 int[] userIDs;
 int[] userMap;
 // user colors
-color[] userColor = new color[]{ color(255,0,0), color(0,255,0), color(0,0,255), color(255,255,0), color(255,0,255), color(0,255,255)};
+color[] userColor = new color[]{ color(3,250, 240), color(0,255,0), color(0,0,255), color(255,255,0), color(255,0,255), color(0,255,255)};
 
 // turn joint distance into scalar form
 float distanceScalar;
@@ -142,7 +142,11 @@ void draw(){
           kinect.convertRealWorldToProjective(currentPositionVector, currentPositionVector);
           currentPositionVector.lerp(lastPositionVector, 0.5f);
           distanceScalar = (225/currentPositionVector.z);
-          ellipse(currentPositionVector.x, currentPositionVector.y, distanceScalar*jointMarkerSize, distanceScalar*jointMarkerSize);
+          if (
+            positionLabel == "head"
+          ) {
+            ellipse(currentPositionVector.x, currentPositionVector.y, distanceScalar*jointMarkerSize, distanceScalar*jointMarkerSize);
+          }
           lastPositionVector = currentPositionVector;
           // add each position to an OSC bundle
           OscMessage messageOut = new OscMessage("/kinect");
