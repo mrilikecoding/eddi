@@ -1,12 +1,9 @@
 import numpy as np
-import cv2
-import time
 
 from src.gesture_segmenter import GestureSegmenter
 from src.gesture_comparer import GestureComparer
 from src.viewpoints_comparer import ViewpointsComparer
 from src.gesture_aesthetic_sequence_mapper import GestureAestheticSequenceMapper
-from src import utils
 from global_config import global_config
 
 
@@ -172,8 +169,6 @@ class GesturePipelineRunner:
             print("New Gesture Detected")
             # TODO make work for multiple people
             self.gesture_comparer.ingest_sequences(sequences=sequences)
-            # if global_config["train_gesture_segmenter"]:
-            #     self.display_gesture_explorer(sequences)
             # allow the outputs to react to this gesture
             # right now it'll just use the last sequence in the dict
             # but that's prob ok for experimenting with just me at the moment
@@ -191,31 +186,6 @@ class GesturePipelineRunner:
         if self.gesture_comparer.gestures_locked and self.gesture_comparer.best_output:
             self.gesture_comparer.best_output = None
         self.gesture_comparer.process_cycle()
-
-    def display_gesture_explorer(self, sequences):
-        gesture_energy_matrix = sequences["gesture_energy_matrix"]
-        energy = sequences["meta"]["energy"]
-        start, end = sequences["meta"]["idxs"]
-        mei_sequence = sequences["MEI"]
-        if global_config["train_gesture_segmenter"]:
-            utils.display_image(
-                "Energy Matrix",
-                gesture_energy_matrix,
-                normalize=True,
-                input_range=(
-                    np.min(gesture_energy_matrix),
-                    np.max(gesture_energy_matrix),
-                ),
-                resize=(300, 300),
-                text=f"e={np.round(energy, 4)} l={end-start}, c={self.current_cycle}",
-                text_params={"pos": (20, 20), "color": 0},
-                event_func=gesture_explorer_handler,
-                event_params={
-                    "sequence": mei_sequence,
-                    "energy_matrix": gesture_energy_matrix,
-                },
-                wait=0,
-            )
 
     def segment_gestures(
         self, energy_moment_delta_volumes, mei_volumes, mhi_volumes, cycle, cycle_name
@@ -251,65 +221,3 @@ class GesturePipelineRunner:
         )
 
         return sequences
-
-    def display_captured_gestures_window(self):
-        # TODO add a conditional flag for this display
-        for sequence_count, sequence in enumerate(self.global_gesture_sequences):
-            sequence_length = len(sequence["MEI"])
-            for frame_count, frame in enumerate(sequence["MEI"]):
-                info1 = (
-                    f"Seq: {sequence_count + 1}, Frame: {frame_count}/{sequence_length}"
-                )
-                info2 = f"Cycle: {sequence['meta']['at_cycle']} Energy: {sequence['meta']['energy']}"
-                frame = utils.put_text(
-                    frame,
-                    info1,
-                    position=(10, 10),
-                    color=(255, 0, 255),
-                    convert_image_color=True,
-                )
-                frame = utils.put_text(
-                    frame,
-                    info2,
-                    position=(10, 30),
-                    color=(255, 0, 255),
-                    convert_image_color=True,
-                )
-                utils.display_image("Gesture", frame, top=True, wait=0)
-
-
-# for now putting this outside class to make event handler stuff easier
-def gesture_explorer_handler(params):
-    def view_gesture(params):
-        sequence = params["sequence"]
-        for i, s in enumerate(sequence):
-            s = np.copy(s)
-            display_frame = utils.put_text(s, f"{i}/{len(sequence)}", (15, 15))
-            cv2.imshow("Sequence", display_frame)
-            cv2.waitKey(50)
-
-    sequence = params["sequence"]
-    display_frame = utils.put_text(
-        np.copy(sequence[0]), f"{0}/{len(sequence)}", (15, 15)
-    )
-    cv2.imshow("Sequence", display_frame)
-    k = cv2.waitKey(0)
-    if k == ord("c"):
-        view_gesture(params)
-    elif k == ord("q"):
-        cv2.destroyAllWindows()
-    elif k == ord("n"):
-        id = time.time()
-        print("Negative")
-        cv2.imwrite(f"training/negative/neg_energy-{id}.jpg", params["energy_matrix"])
-        with open(f"training/negative/pos_mhi_sequence-{id}.npy", "wb") as f:
-            np.save(f, sequence)
-    elif k == ord("p"):
-        id = time.time()
-        print("Positive")
-        cv2.imwrite(f"training/positive/pos_energy-{id}.jpg", params["energy_matrix"])
-        with open(f"training/positive/neg_mhi_sequence-{id}.npy", "wb") as f:
-            np.save(f, sequence)
-
-    print("Viewing gesture")
-    return True

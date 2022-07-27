@@ -346,6 +346,14 @@ class GestureDashboard:
                         gc = self.gesture_comparer
                     sequences = [gc.candidate_sequences] + gc.gesture_sequence_library
                     self.save_labeled_sequence(label, sequences[label_seq])
+                    # if we label a gesture negative when running live,
+                    # zero out the weight
+                    if (
+                        label == "neg"
+                        and not global_config["load_saved_sequences_into_dashboard"]
+                    ):
+                        # TODO make this drop off the gesture immediately
+                        gc.weights[label_seq - 1] = 0.0
                 # Lock / unlock the lock sequences button
                 if self.mouse_over_lock_sequence_button():
                     if self.gesture_comparer.gestures_locked:

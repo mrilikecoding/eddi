@@ -26,9 +26,11 @@ class PatternSequenceMapper(PipelineNode):
         self.counter = 0
         self.weight = global_config["output_weights"]["pattern_sequencer"]
         self.name = "pattern_sequencer"
-        self.modulator_value = 250
+        self.modulator_value = 75
         self.sequence_mode = global_config["pattern_sequencer"]["sequence_mode"]
+        self.perline_range = global_config["pattern_sequencer"]["default_perline_range"]
         self.amplitude = 0.3
+        self.color_mode = global_config["pattern_sequencer"]["color_mode"]
         if self.sequence_mode == "oscillator1":
             self.samples = np.linspace(
                 self.amplitude,
@@ -46,8 +48,10 @@ class PatternSequenceMapper(PipelineNode):
                 endpoint=False,
             )
         elif self.sequence_mode == "perlin":
+            # if self.color_mode == "ocean":
+            # self.modulator_value = 25
+            # self.perline_range = (0.3, 0.9)
             self.samples = self.generate_perlin_noise()
-        self.color_mode = global_config["pattern_sequencer"]["color_mode"]
 
     def process_input_device_values(self, input_device_instance=None):
         out_value = 0
@@ -147,12 +151,15 @@ class PatternSequenceMapper(PipelineNode):
 
     def generate_perlin_noise(self):
         # https://github.com/pvigier/perlin-numpy
+        # https://weber.itn.liu.se/~stegu/simplexnoise/simplexnoise.pdf
         np.random.seed(0)
         d = self.modulator_value
         noise = generate_perlin_noise_3d(
             (d, 1, 6), (1, 1, 6), tileable=(True, True, True)
         )
 
-        samples = cv2.normalize(noise, noise, 0.25, 1.0, cv2.NORM_MINMAX)
+        samples = cv2.normalize(
+            noise, noise, self.perline_range[0], self.perline_range[1], cv2.NORM_MINMAX
+        )
 
         return samples

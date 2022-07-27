@@ -14,7 +14,6 @@ class GestureComparer:
         )
         self.similarities = [0 for _ in range(self.gesture_limit)]
         self.similarities_meta = [{} for _ in range(self.gesture_limit)]
-        self.train_gesture_classifier = global_config["train_gesture_segmenter"]
         self.gesture_classifier = None
         self.similarity_threshold = 0.5  # just a placeholder val
         self.best_output = None
@@ -66,6 +65,9 @@ class GestureComparer:
                     "weight"
                 ] = self.weights[most_similar_idx]
                 self.best_output = self.gesture_sequence_library[most_similar_idx]
+            elif global_config["sequence_all_incoming_gestures"] == True:
+                self.most_similar_sequence_index = None
+                self.best_output = sequences
             else:
                 self.most_similar_sequence_index = None
                 self.best_output = None
