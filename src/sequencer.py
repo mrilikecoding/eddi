@@ -106,6 +106,7 @@ class Sequencer:
     def get_next_values(self):
         queue = copy.copy(self.director.get_current_queue())
         if len(queue):
+            self.queue.popleft()
             return queue.popleft()
         else:
             return False
