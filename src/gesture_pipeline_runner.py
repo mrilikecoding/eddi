@@ -137,7 +137,13 @@ class GesturePipelineRunner:
             self.current_cycle_sequence_3 = None
             return sequences
 
+    def update_config_values(self):
+        self.frame_window_length = self.director.config["frame_window_length"]
+        self.gesture_limit = self.director.config["gesture_limit"]
+        self.gesture_heuristics = self.director.config["gesture_heuristics"]
+
     def run_cycle(self, energy_moment_delta_volumes, mei_volumes, mhi_volumes):
+        self.update_config_values()
         sequences = None
         # Want to retain the output on the gesture comparer if it was set manually in
         # the dashboard (for viewing a light sequence for a certain gesture)
