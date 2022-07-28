@@ -21,7 +21,8 @@ global_config = {
     # 0 means this output will not be present when competing with other sequencers
     # 1 means this outout will be out 1/(number of other sequences layered in)
     # these values will be added and normalized between 0-1
-    # note - at the moment,
+    # note - at the moment, these are only compared two at a time. So the logic is if two values are the same
+    # then just take the average of the two. Otherwise, use the two values as percentages
     "output_weights": {
         "fuzzy_tracker": 0.01,
         "pattern_sequencer": 0.01,
@@ -57,9 +58,9 @@ global_config = {
     "sequence_all_incoming_gestures": True,  # if there is no "most similar sequence", still output the latest sequence
     "repeated_gesture_similarity_threshold": 15.0,  # upper bound of similarity score when selected a repeated gesture
     "weight_increase_factor": 3.5,  # how much to scale up the weight of a repeated gesture
-    "weight_pruning_threshold": 0.22,  # when to drop off a gesture from library if the weights have been lowered enough
+    "weight_pruning_threshold": 0.15,  # when to drop off a gesture from library if the weights have been lowered enough
     "load_saved_sequences_into_dashboard": False,  # load in a saved set of sequences from a gesture dashboard
-    "load_saved_sequences_name": "sequences-1658897728.249665",  # sequences from gesture dashboard
+    "load_saved_sequences_name": "sequences-1658942926.640728",  # sequences from gesture dashboard
     "saved_sequences_path": "saved_sequences/",  # path to sequence binaries
     "view_light_sequence_plots": False,  # plot the rgb curves when replaying a gesture
 }
