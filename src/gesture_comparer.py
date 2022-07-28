@@ -1,12 +1,12 @@
 import numpy as np
 import math
 
-from global_config import global_config
 from src.gesture_dashboard import GestureDashboard
 
 
 class GestureComparer:
-    def __init__(self, gesture_sequence_library=[], gesture_limit=5):
+    def __init__(self, gesture_sequence_library=[], gesture_limit=5, director=None):
+        self.director = director
         self.gesture_limit = gesture_limit
         self.gesture_sequence_library = gesture_sequence_library
         self.weights = np.array([1 for g in gesture_sequence_library]) / len(
@@ -22,7 +22,7 @@ class GestureComparer:
         self.detected_gesture_count = 0
         self.gestures_locked = False
 
-        self.dashboard = GestureDashboard()
+        self.dashboard = GestureDashboard(director=self.director)
 
     def process_cycle(self):
         # loop captured gestures
@@ -53,7 +53,7 @@ class GestureComparer:
 
             if (
                 self.similarities[most_similar_idx]
-                < global_config["repeated_gesture_similarity_threshold"]
+                < self.director.config["repeated_gesture_similarity_threshold"]
             ):
                 self.most_similar_sequence_index = (
                     most_similar_idx,
@@ -65,7 +65,7 @@ class GestureComparer:
                     "weight"
                 ] = self.weights[most_similar_idx]
                 self.best_output = self.gesture_sequence_library[most_similar_idx]
-            elif global_config["sequence_all_incoming_gestures"] == True:
+            elif self.director.config["sequence_all_incoming_gestures"] == True:
                 self.most_similar_sequence_index = None
                 self.best_output = sequences
             else:
@@ -148,7 +148,7 @@ class GestureComparer:
 
     def update_gesture_weights(self, boost_idx):
         self.weights[boost_idx] = (
-            self.weights[boost_idx] * global_config["weight_increase_factor"]
+            self.weights[boost_idx] * self.director.config["weight_increase_factor"]
         )
         self.normalize_weights()
 
@@ -159,7 +159,7 @@ class GestureComparer:
         corresponding entries so a new gesture can take its place
         """
         prune_list = np.array(
-            [w < global_config["weight_pruning_threshold"] for w in self.weights]
+            [w < self.director.config["weight_pruning_threshold"] for w in self.weights]
         )
         if not len(self.similarities):
             return

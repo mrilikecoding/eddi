@@ -1,13 +1,13 @@
 from src.gesture_comparer import GestureComparer
 from src.viewpoints_gesture import ViewpointsGesture
-from global_config import global_config
 
 
 class ViewpointsComparer(GestureComparer):
-    def __init__(self, gesture_limit=global_config["gesture_limit"]):
-        self.gesture_limit = gesture_limit
+    def __init__(self, gesture_limit=3, director=None):
+        self.director = director
+        self.gesture_limit = self.director.config["gesture_limit"]
         self.viewpoints_gestures = []
-        super().__init__(gesture_limit=self.gesture_limit)
+        super().__init__(gesture_limit=self.gesture_limit, director=director)
 
     def ingest_sequences(self, sequences):
         if self.gestures_locked or sequences is None:

@@ -4,7 +4,6 @@ from src.gesture_segmenter import GestureSegmenter
 from src.gesture_comparer import GestureComparer
 from src.viewpoints_comparer import ViewpointsComparer
 from src.gesture_aesthetic_sequence_mapper import GestureAestheticSequenceMapper
-from global_config import global_config
 
 
 class GesturePipelineRunner:
@@ -16,9 +15,11 @@ class GesturePipelineRunner:
         gesture_heuristics={},
         frame_window_length=75,
         display_info=False,
+        director=None,
     ):
+        self.director = director
         self.name = "gesture_pipeline"
-        self.weight = global_config["output_weights"]["gesture_pipeline"]
+        self.weight = self.director.config["output_weights"]["gesture_pipeline"]
         self.display_capture_gestures = display_captured_gestures
         self.energy_diff_gesture_sequences = {}
         self.MEI_gesture_sequences = {}
@@ -48,8 +49,12 @@ class GesturePipelineRunner:
         self.sequence_viewer_counter = 0
 
         # initialize the interface for comparing new gestures with stored gestures
-        self.gesture_comparer = ViewpointsComparer(gesture_limit=self.gesture_limit)
-        self.gesture_sequence_mapper = GestureAestheticSequenceMapper()
+        self.gesture_comparer = ViewpointsComparer(
+            gesture_limit=self.gesture_limit, director=self.director
+        )
+        self.gesture_sequence_mapper = GestureAestheticSequenceMapper(
+            director=self.director
+        )
         # where to store a cycle's output sequence (accessed by #run_cycle caller)
         self.output = []
 

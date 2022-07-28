@@ -6,11 +6,10 @@ import cv2
 from scipy.stats import skew
 from src import utils
 
-from global_config import global_config
-
 
 class GestureAestheticSequenceMapper:
-    def __init__(self):
+    def __init__(self, director=None):
+        self.director = director
         self.output = []
         # TODO - again, grab this from a config
         self.spatial_categories = [
@@ -22,7 +21,7 @@ class GestureAestheticSequenceMapper:
             "front",
             "middle",
         ]
-        self.show_plots = global_config["view_light_sequence_plots"]
+        self.show_plots = self.director.config["view_light_sequence_plots"]
 
     def normalize_point(
         self, x, min_x, max_x, min_target, max_target, return_boundary=False
@@ -158,8 +157,8 @@ class GestureAestheticSequenceMapper:
         # or we can try HSV - OPENCV HSV is [0-180, 0-255, 0-255]
         # print("Energy", meta.get("energy"))
         # print("Weight", meta.get("weight"))
-        min_energy = global_config["gesture_heuristics"]["min_energy_threshold"]
-        max_energy = global_config["gesture_heuristics"]["max_energy_threshold"]
+        min_energy = self.director.config["gesture_heuristics"]["min_energy_threshold"]
+        max_energy = self.director.config["gesture_heuristics"]["max_energy_threshold"]
         hue = int(
             self.normalize_point(
                 energy, min_energy, max_energy, 0, 180, return_boundary=True

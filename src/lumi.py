@@ -1,9 +1,9 @@
 import asyncio
-import time
 from pythonosc import udp_client
 from pythonosc import dispatcher
 from pythonosc import osc_server
 from pythonosc.osc_server import AsyncIOOSCUDPServer
+from src.director import Director
 
 from src.spatial_light_controller import SpatialLightController
 
@@ -15,11 +15,12 @@ class Lumi:
         self.client = udp_client.SimpleUDPClient(send_server, send_port)
         self.FPS = 30  # how many updates / frames per sec?
         self.osc_message_prefix = osc_message_prefix
+        self.director = Director()
         self.output_registry = {}
         self.input_registry = {}
         self.input_dispatcher = dispatcher.Dispatcher()
         self.light_controller = SpatialLightController(
-            send_channel_message=self.send_channel_message
+            send_channel_message=self.send_channel_message, director=self.director
         )
         self.time = 0  # for sequencing - incremented in #update
 

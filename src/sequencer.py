@@ -1,12 +1,14 @@
 from collections import deque
-from global_config import global_config
 import copy
 
 
 class Sequencer:
-    def __init__(self, queue_length=500):
+    def __init__(self, queue_length=500, director=None):
         # TODO not sure if we need this
-        queue_length = global_config.get("max_sequence_queue_length") or queue_length
+        self.director = director
+        queue_length = (
+            self.director.config.get("max_sequence_queue_length") or queue_length
+        )
         self.queue_length = queue_length
         self.queue = deque([])
         self.queue_meta = deque([])
@@ -47,20 +49,6 @@ class Sequencer:
         """
         if not sequence:
             return
-
-        # TODO handle sequence weighting here?
-        # for i, output in enumerate(outputs):
-        #     seq = output[0]
-        #     for j, frame in enumerate(seq):
-        #         for k, v in frame.items():
-        #             outputs[i][0][j][k] = tuple(
-        #                 [x for x in v]
-        #             )
-        # weight each output sequence value according to its weight
-        # and number of competing sequences
-        # weights = [output[1] for output in outputs]
-        # normalizer = np.sum(weights) + eps
-        # combined_outputs = np.array([o for o in outputs])
 
         if len(self.queue) < len(sequence):
             # open up empty queue slots to accomodate sequence
@@ -109,9 +97,15 @@ class Sequencer:
                         rgb[ch] = channel_value
 
                     queued_frame[position] = tuple(rgb)
+        # send the latest queued output to the Director class instance for
+        # final stage transformations
+        self.director.set_current_queue(
+            copy.copy(self.queue), copy.copy(self.queue_meta)
+        )
 
     def get_next_values(self):
-        if len(self.queue):
-            return self.queue.popleft()
+        queue = copy.copy(self.director.get_current_queue())
+        if len(queue):
+            return queue.popleft()
         else:
             return False
