@@ -64,7 +64,11 @@ class FuzzyJointTracker(PipelineNode):
         }
         return output
 
+    def update_config_values(self):
+        self.min_max_dimensions = (self.director.config["space_min_max_dimensions"],)
+
     def process_input_device_values(self, input_object_instance):
+        self.update_config_values()
         joint = self.space_joint_to_track
         output_map = {}
         for _, attrs in input_object_instance.people.items():

@@ -91,6 +91,11 @@ class MotionHistoryImager(PipelineNode):
 
         super().__init__(min_max_dimensions)
 
+    def update_config_values(self):
+        self.min_max_dimensions = (self.director.config["space_min_max_dimensions"],)
+        self.frame_window_length = self.director.config["frame_window_length"]
+        self.frame_decay = self.director.config["frame_decay"]
+
     def input_object_is_tracking_user(self):
         return any(list(self.input_object_instance.tracking.values()))
 
@@ -98,6 +103,7 @@ class MotionHistoryImager(PipelineNode):
         """
         This is the primary entry point for this pipeline node
         """
+        self.update_config_values()
         self.input_object_instance = input_object_instance
         if self.input_object_is_tracking_user():
             self.tracking = True
