@@ -3,11 +3,11 @@ import numpy as np
 import time
 
 from src import utils
-from global_config import global_config
 
 
 class GestureDashboard:
-    def __init__(self):
+    def __init__(self, director=None):
+        self.director = director
         self.sequence_viewer_counter = 0
         self.mouse_pos = (None, None)
         self.gesture_comparer = None
@@ -45,15 +45,15 @@ class GestureDashboard:
         frames = []
         max_len = None
         if (
-            global_config["load_saved_sequences_into_dashboard"]
+            self.director.config["load_saved_sequences_into_dashboard"]
             and not self.override_data_load
         ):
             similar_gesture_detected = False
             # reset the best output here, since we may manually update this when clicking
             # saved gestures - TODO make this a little more intuitive
             self.gesture_comparer.best_output = None
-            saved_data_path = global_config["saved_sequences_path"]
-            saved_data_name = global_config["load_saved_sequences_name"]
+            saved_data_path = self.director.config["saved_sequences_path"]
+            saved_data_name = self.director.config["load_saved_sequences_name"]
             max_len = 65  # todo compute this from data or save into data meta
             try:
                 data = utils.read_data(saved_data_path, saved_data_name)
@@ -72,7 +72,7 @@ class GestureDashboard:
             if len(gc.gesture_sequence_library) == 0:
                 return
 
-            max_len = global_config["gesture_heuristics"]["maximum_frame_count"]
+            max_len = self.director.config["gesture_heuristics"]["maximum_frame_count"]
 
             similar_gesture_detected = False
             if gc.most_similar_sequence_index:
@@ -340,7 +340,7 @@ class GestureDashboard:
                 label_seq, label = self.mouse_over_sequence_classifier_button()
                 if label_seq >= 0:
                     gc = None
-                    if global_config["load_saved_sequences_into_dashboard"]:
+                    if self.director.config["load_saved_sequences_into_dashboard"]:
                         gc = self.loaded_data["gesture_comparer_instance"]
                     else:
                         gc = self.gesture_comparer
@@ -350,7 +350,9 @@ class GestureDashboard:
                     # zero out the weight
                     if (
                         label == "neg"
-                        and not global_config["load_saved_sequences_into_dashboard"]
+                        and not self.director.config[
+                            "load_saved_sequences_into_dashboard"
+                        ]
                     ):
                         # TODO make this drop off the gesture immediately
                         gc.weights[label_seq - 1] = 0.0
@@ -362,7 +364,7 @@ class GestureDashboard:
                         # no longer load data - however, we'll set our current
                         # comparer instance to the loaded data so we continue
                         # seamlessly
-                        if global_config["load_saved_sequences_into_dashboard"]:
+                        if self.director.config["load_saved_sequences_into_dashboard"]:
                             self.gesture_comparer = self.loaded_data[
                                 "gesture_comparer_instance"
                             ]
@@ -376,7 +378,7 @@ class GestureDashboard:
                     sequences = [gc.candidate_sequences] + gc.gesture_sequence_library
                     data = {"gesture_comparer_instance": gc, "sequences": sequences}
                     utils.write_data(
-                        global_config["saved_sequences_path"],
+                        self.director.config["saved_sequences_path"],
                         data,
                         f"sequences-{time.time()}",
                     )
@@ -384,7 +386,7 @@ class GestureDashboard:
                 mouse_over_seq = self.mouse_over_sequence()
                 if mouse_over_seq >= 0:
                     seq = mouse_over_seq
-                    if global_config["load_saved_sequences_into_dashboard"]:
+                    if self.director.config["load_saved_sequences_into_dashboard"]:
                         gc = self.loaded_data["gesture_comparer_instance"]
                     else:
                         gc = self.gesture_comparer

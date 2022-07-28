@@ -6,7 +6,6 @@ from skimage.draw import line
 
 from collections import deque
 from src.pipeline_node import PipelineNode
-from global_config import global_config
 
 
 class MotionHistoryImager(PipelineNode):
@@ -23,7 +22,9 @@ class MotionHistoryImager(PipelineNode):
         frame_decay,
         display_canvas=False,
         display_params={},
+        director=None,
     ):
+        self.director = director
         self.input_joint_list = []
         # for normalizing constants
         self.min_x = min_max_dimensions["min_x"]
@@ -202,9 +203,18 @@ class MotionHistoryImager(PipelineNode):
         tri5 = "torso", "leftHip", "rightHip"
         tri6 = "leftHand", "torso", "leftShoulder"
         tri7 = "rightHand", "torso", "rightShoulder"
-        tri8 = "leftHand", "rightHand", "head",
-        tri8 = "leftHand", "rightHand", "rightShoulder", "leftShoulder",
-        
+        tri8 = (
+            "leftHand",
+            "rightHand",
+            "head",
+        )
+        tri8 = (
+            "leftHand",
+            "rightHand",
+            "rightShoulder",
+            "leftShoulder",
+        )
+
         for joint_list in [tri1, tri2, tri3, tri4, tri5, tri6, tri7, tri8]:
             joint_inputs = self.joint_position_indices[person]
             joints = [
@@ -376,7 +386,7 @@ class MotionHistoryImager(PipelineNode):
             # canvases = np.concatenate([MHI_canvases, MEI_canvases], axis=0)
             canvases = MHI_canvases
             window_name = "MHI Canvas"
-            if global_config["miror_canvas_display"]:
+            if self.director.config["miror_canvas_display"]:
                 canvases = cv2.flip(canvases, 1)
             cv2.imshow(window_name, canvases)
             cv2.setWindowProperty(window_name, cv2.WND_PROP_TOPMOST, 1)

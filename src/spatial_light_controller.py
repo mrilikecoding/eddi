@@ -1,6 +1,5 @@
 import json
 
-from global_config import global_config
 from src.controller import Controller
 from src.fuzzy_joint_tracker import FuzzyJointTracker
 from src.mhi import MotionHistoryImager
@@ -10,9 +9,10 @@ from src.sequencer import Sequencer
 
 
 class SpatialLightController(Controller):
-    def __init__(self, send_channel_message, output_devices={}):
+    def __init__(self, send_channel_message, output_devices={}, director=None):
 
         # TODO this is repeated a few places - DRY up
+        # spatial properties
         self.spatial_categories = [
             "left",
             "right",
@@ -36,41 +36,47 @@ class SpatialLightController(Controller):
         except Exception as e:
             print("No device config file found", e)
 
+        # instantiate global director that will be passed into nodes
+        self.director = director
+
         # Init processing pipeline node instances
         self.fuzzy_tracker = FuzzyJointTracker(
-            min_max_dimensions=global_config["space_min_max_dimensions"],
+            min_max_dimensions=self.director.config["space_min_max_dimensions"],
+            director=self.director,
         )
 
         # Sequencer Initialization
         self.send_channel_message = send_channel_message
-        self.sequencer = Sequencer()
+        self.sequencer = Sequencer(director=self.director)
 
         # Generic Pattern Sequence Mapper (for background textures etc)
-        self.pattern_sequence_mapper = PatternSequenceMapper()
+        self.pattern_sequence_mapper = PatternSequenceMapper(director=self.director)
 
         # Gesture Pipeline Initialization
         # track global gesture state in this class
         self.gesture_pipeline = GesturePipelineRunner(
-            frame_window_length=global_config["frame_window_length"],
-            display_gesture_matrices=global_config["display_gesture_matrices"],
-            display_captured_gestures=global_config["display_captured_gestures"],
-            gesture_limit=global_config["gesture_limit"],
-            gesture_heuristics=global_config["gesture_heuristics"],
+            frame_window_length=self.director.config["frame_window_length"],
+            display_gesture_matrices=self.director.config["display_gesture_matrices"],
+            display_captured_gestures=self.director.config["display_captured_gestures"],
+            gesture_limit=self.director.config["gesture_limit"],
+            gesture_heuristics=self.director.config["gesture_heuristics"],
+            director=self.director,
         )
 
         # Motion Imaging Initialization
         # track global input image state in this class
         self.motion_history_imager = MotionHistoryImager(
-            min_max_dimensions=global_config["space_min_max_dimensions"],
-            frame_window_length=global_config["frame_window_length"],
-            frame_decay=global_config["frame_decay"],
-            display_canvas=global_config["display_mhi_canvas"],
+            min_max_dimensions=self.director.config["space_min_max_dimensions"],
+            frame_window_length=self.director.config["frame_window_length"],
+            frame_decay=self.director.config["frame_decay"],
+            display_canvas=self.director.config["display_mhi_canvas"],
+            director=self.director,
         )
 
         self.input_processing_pipeline = []
-        if global_config["pattern_sequencer"]["enabled"]:
+        if self.director.config["pattern_sequencer"]["enabled"]:
             self.input_processing_pipeline.append(self.pattern_sequence_mapper)
-        if global_config["fuzzy_tracker"]["enabled"]:
+        if self.director.config["fuzzy_tracker"]["enabled"]:
             self.input_processing_pipeline.append(self.fuzzy_tracker)
         self.input_processing_pipeline.append(self.motion_history_imager)
 
@@ -91,7 +97,6 @@ class SpatialLightController(Controller):
             node.process_input_device_values(input_object_instance)
             if len(node.output):
                 outputs.append((node.output, node.weight, node.name))
-
 
         # motion history imager processes volume of mei and mhi images as well as their diff
         # NOTE - these volumes operate as a FIFO array of images of length frame_window_length

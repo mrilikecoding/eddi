@@ -2,7 +2,6 @@ import numpy as np
 from perlin_numpy import generate_perlin_noise_3d
 import cv2
 
-from global_config import global_config
 from src.pipeline_node import PipelineNode
 
 
@@ -22,15 +21,18 @@ class PatternSequenceMapper(PipelineNode):
     can be specified / triggered via midi or osc or whatever
     """
 
-    def __init__(self):
+    def __init__(self, director=None):
+        self.director = director
         self.counter = 0
-        self.weight = global_config["output_weights"]["pattern_sequencer"]
+        self.weight = self.director.config["output_weights"]["pattern_sequencer"]
         self.name = "pattern_sequencer"
         self.modulator_value = 75
-        self.sequence_mode = global_config["pattern_sequencer"]["sequence_mode"]
-        self.perline_range = global_config["pattern_sequencer"]["default_perline_range"]
+        self.sequence_mode = self.director.config["pattern_sequencer"]["sequence_mode"]
+        self.perline_range = self.director.config["pattern_sequencer"][
+            "default_perline_range"
+        ]
         self.amplitude = 0.3
-        self.color_mode = global_config["pattern_sequencer"]["color_mode"]
+        self.color_mode = self.director.config["pattern_sequencer"]["color_mode"]
         if self.sequence_mode == "oscillator1":
             self.samples = np.linspace(
                 self.amplitude,

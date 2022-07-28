@@ -1,15 +1,16 @@
 from src.pipeline_node import PipelineNode
-from global_config import global_config
 
 
 class FuzzyJointTracker(PipelineNode):
     def __init__(
         self,
         min_max_dimensions,
+        director=None,
     ):
+        self.director = director
         self.space_joint_to_track = "head"
-        self.color_mode = global_config["fuzzy_tracker"]["color_mode"]
-        self.weight = global_config["output_weights"]["fuzzy_tracker"]
+        self.color_mode = director.config["fuzzy_tracker"]["color_mode"]
+        self.weight = director.config["output_weights"]["fuzzy_tracker"]
         self.name = "fuzzy_tracker"
         self.tracking = False
         # for normalizing fuzzy values against min / max dimensions
