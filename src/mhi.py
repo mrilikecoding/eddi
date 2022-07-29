@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import math
+import copy
 
 from skimage.draw import line
 
@@ -67,6 +68,7 @@ class MotionHistoryImager(PipelineNode):
 
         # joint position tracking
         self.joint_position_indices = {}
+        self.previous_joint_position_indices = {}  # for smoothing between frames
 
         # For drawing skel - should be a DAG
         # NB: not focusing below hips for now
@@ -137,12 +139,13 @@ class MotionHistoryImager(PipelineNode):
             self.compute_moments(person)
             self.update_image_volumes(person)
             self.update_moment_volumes(person)
+        self.previous_joint_position_indices = copy.copy(self.joint_position_indices)
 
     def post_process_canvas(self, person):
         self.MHI_canvases[person]
         self.MEI_canvases[person]
-        cv2.medianBlur(self.MHI_canvases[person], 5)
-        cv2.medianBlur(self.MEI_canvases[person], 5)
+        cv2.medianBlur(self.MHI_canvases[person], 7)
+        cv2.medianBlur(self.MEI_canvases[person], 7)
 
     def safe_log10(self, x, eps=1e-10):
         """
@@ -201,6 +204,7 @@ class MotionHistoryImager(PipelineNode):
             return
         MEI_canvas = self.MEI_canvases[person]
         MHI_canvas = self.MHI_canvases[person]
+
         # each polygon below will be filled
         tri1 = "head", "leftShoulder", "neck", "rightShoulder"
         tri2 = "leftShoulder", "leftElbow", "leftHand"
@@ -220,9 +224,9 @@ class MotionHistoryImager(PipelineNode):
             "rightShoulder",
             "leftShoulder",
         )
-
         for joint_list in [tri1, tri2, tri3, tri4, tri5, tri6, tri7, tri8]:
-            joint_inputs = self.joint_position_indices[person]
+            joint_positions = []
+            joint_inputs = copy.copy(self.joint_position_indices[person])
             joints = [
                 joint_inputs[joint] for joint in joint_list if joint in joint_inputs
             ]
@@ -231,13 +235,77 @@ class MotionHistoryImager(PipelineNode):
                 cv2.fillConvexPoly(MHI_canvas, joint_positions, 255)
                 cv2.fillConvexPoly(MEI_canvas, joint_positions, 255)
 
+        ## Here, use the previous coords and the current coords to "fill in"
+        # the gaps between frames so image is smooth
+        if (
+            person in self.previous_joint_position_indices
+            and person in self.joint_position_indices
+        ):
+            if (
+                self.previous_joint_position_indices[person]
+                != self.joint_position_indices[person]
+            ):
+                # in each filler array, first item is previous joint position,
+                # next is same joint in current position,
+                # then the third complete triangle
+                fillers = [
+                    ["leftHand", "leftHand", "leftElbow"],
+                    ["leftHand", "leftHand", "rightHand"],
+                    ["rightHand", "rightHand", "rightElbow"],
+                    ["rightHand", "rightHand", "leftHand"],
+                    ["rightShoulder", "rightShoulder", "head"],
+                    ["leftShoulder", "leftShoulder", "head"],
+                    ["head", "head", "leftShoulder"],
+                    ["head", "head", "rightShoulder"],
+                    ["leftElbow", "leftElbow", "leftHand"],
+                    ["rightElbow", "rightElbow", "rightHand"],
+                    ["leftElbow", "leftElbow", "leftShoulder"],
+                    ["rightElbow", "rightElbow", "rightShoulder"],
+                    ["leftHip", "leftHip", "torso"],
+                    ["rightHip", "rightHip", "torso"],
+                ]
+                previous = self.previous_joint_position_indices[person]
+                current = self.joint_position_indices[person]
+                for poly in fillers:
+                    self.draw_filler_joint_polygon(
+                        prev_joint=poly[0],
+                        current_joint_1=poly[1],
+                        current_joint_2=poly[2],
+                        previous_joints=previous,
+                        current_joints=current,
+                        MEI_canvas=MEI_canvas,
+                        MHI_canvas=MHI_canvas,
+                    )
+
+    def draw_filler_joint_polygon(
+        self,
+        prev_joint,
+        current_joint_1,
+        current_joint_2,
+        previous_joints,
+        current_joints,
+        MHI_canvas,
+        MEI_canvas,
+    ):
+        if (
+            prev_joint in previous_joints
+            and current_joint_1 in current_joints
+            and current_joint_2 in current_joints
+        ):
+            p = previous_joints[prev_joint]
+            c1 = current_joints[current_joint_1]
+            c2 = current_joints[current_joint_2]
+            poly_coords = np.array([p, c1, c2])
+            cv2.fillConvexPoly(MHI_canvas, poly_coords, 255)
+            cv2.fillConvexPoly(MEI_canvas, poly_coords, 255)
+
     def parse_skeleton_joints(self, person, attrs):
         # init joint position lookup table if we don't have one
         if not self.tracking:
             return
         if person not in self.joint_position_indices:
             self.joint_position_indices[person] = {}
-        joint_positions = self.joint_position_indices[person]
+        joint_positions = copy.copy(self.joint_position_indices[person])
 
         self.MEI_canvases[person] = np.copy(self.init_canvas)
         # Only need this if drawing the joints
@@ -288,6 +356,7 @@ class MotionHistoryImager(PipelineNode):
                     continue
 
                 joint_positions[joint] = (x_prime, y_prime)
+            self.joint_position_indices[person] = joint_positions
         # self.connect_skel_joints(person)
 
     def check_and_initialize_canvases_and_volumes(self, person):
