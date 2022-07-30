@@ -190,12 +190,16 @@ class GesturePipelineRunner:
                 self.output = self.gesture_sequence_mapper.map_sequences_to_rgb(
                     self.gesture_comparer.best_output
                 )
+        elif self.gesture_comparer.gestures_locked and self.gesture_comparer.best_output:
+            self.output = self.gesture_sequence_mapper.map_sequences_to_rgb(
+                self.gesture_comparer.best_output
+            )
         # Set the comparer's best output to none if we've locked gestures
         # If a gesture is manually added to the best output from the dashboard
         # it will be picked up from #process_cycle here and stay in this loop
         # to be sequenced and then removed here.
-        if self.gesture_comparer.gestures_locked and self.gesture_comparer.best_output:
-            self.gesture_comparer.best_output = None
+        # if self.gesture_comparer.gestures_locked and self.gesture_comparer.best_output:
+        #     self.gesture_comparer.best_output = None
         self.gesture_comparer.process_cycle()
 
     def segment_gestures(
