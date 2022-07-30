@@ -20,7 +20,7 @@ class SpatialLightController(Controller):
             "bottom",
             "back",
             "front",
-            "middle",
+            # "middle",
         ]
         self.primary_axis = ["left", "right"]
 
@@ -96,7 +96,11 @@ class SpatialLightController(Controller):
         for node in self.input_processing_pipeline:
             node.process_input_device_values(input_object_instance)
             if len(node.output):
-                outputs.append((node.output, node.weight, node.name))
+                outputs.append({
+                    "sequence": node.output, 
+                    "weight": node.weight, 
+                    "origin": node.name,
+                })
 
         # motion history imager processes volume of mei and mhi images as well as their diff
         # NOTE - these volumes operate as a FIFO array of images of length frame_window_length
@@ -113,16 +117,16 @@ class SpatialLightController(Controller):
         )
         if self.gesture_pipeline.output and len(self.gesture_pipeline.output):
             outputs.append(
-                (
-                    self.gesture_pipeline.output,
-                    self.gesture_pipeline.weight,
-                    self.gesture_pipeline.name,
-                )
+                {
+                    "sequence": self.gesture_pipeline.output,
+                    "weight": self.gesture_pipeline.weight,
+                    "origin": self.gesture_pipeline.name,
+                }
             )
 
-        for output in outputs:
-            self.sequencer.add_sequence_to_queue(output[0], output[1], output[2])
-
+        # for output in outputs:
+        #     self.sequencer.add_sequence_to_queue(output[0], output[1], output[2])
+        self.sequencer.add_output_sequences_to_queue(outputs)
     def send_next_frame_values_to_devices(self):
         # get the next column of values in queue
         # average all corresponding outputs
@@ -135,7 +139,7 @@ class SpatialLightController(Controller):
             r = device.get_value("r")
             g = device.get_value("g")
             b = device.get_value("b")
-            # TODO figure out other channels
+            # TODO figure out other channels (amber/uv/etc...)
             self.send_channel_message(device.name, "r", r)
             self.send_channel_message(device.name, "g", g)
             self.send_channel_message(device.name, "b", b)
@@ -172,26 +176,31 @@ class SpatialLightController(Controller):
 
     def set_spatial_map_values(self, spatial_map_values):
         """
-        The primary axis is a carrier and is modified by other axes
+        Out of date - the primary axis is a carrier and is modified by other axes
         """
         if not spatial_map_values:
             return
 
-        for location in self.primary_axis:
+        # for location in self.primary_axis:
+        #     for d in self.attr_indexed_output_devices[location]:
+        #         value = spatial_map_values[location]
+        #         self.output_devices[d].set_value("r", value[0])
+        #         self.output_devices[d].set_value("g", value[1])
+        #         self.output_devices[d].set_value("b", value[2])
+
+        for location in self.spatial_categories:
+            # if location in self.primary_axis:
+            #     continue
+            value = spatial_map_values[location]
             for d in self.attr_indexed_output_devices[location]:
-                value = spatial_map_values[location]
+                # r = r + value[0]
+                # g = g + value[1]
+                # b = b + value[2]
+                # if location == "top":
+                #     print(r, g, b)
+                # self.output_devices[d].set_value("r", r)
+                # self.output_devices[d].set_value("g", g)
+                # self.output_devices[d].set_value("b", b)
                 self.output_devices[d].set_value("r", value[0])
                 self.output_devices[d].set_value("g", value[1])
                 self.output_devices[d].set_value("b", value[2])
-
-        for location in self.spatial_categories:
-            if location in self.primary_axis:
-                continue
-            value = spatial_map_values[location]
-            for d in self.attr_indexed_output_devices[location]:
-                r = self.output_devices[d].get_value("r")
-                g = self.output_devices[d].get_value("g")
-                b = self.output_devices[d].get_value("b")
-                self.output_devices[d].set_value("r", r)
-                self.output_devices[d].set_value("g", g)
-                self.output_devices[d].set_value("b", b)
