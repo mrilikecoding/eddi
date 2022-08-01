@@ -21,8 +21,9 @@ class SpatialLightController(Controller):
             "bottom",
             "back",
             "front",
-            # "middle",
+            "middle",
         ]
+        # TODO prob remove this? ... don't think we need the primary axis anymore
         self.primary_axis = ["left", "right"]
 
         self.output_devices = output_devices
@@ -127,13 +128,16 @@ class SpatialLightController(Controller):
                 }
             )
 
-        self.sequencer.add_output_sequences_to_queue(outputs)
+        if len(outputs):
+            self.sequencer.add_output_sequences_to_queue(outputs)
 
     def send_next_frame_values_to_devices(self):
         # get the next column of values in queue
         # average all corresponding outputs
         # send message
         spatial_map_values = self.sequencer.get_next_values()
+        if not spatial_map_values:
+            return False
         r = len(self.spatial_categories)
         c = len(self.output_devices.keys())
 
@@ -141,20 +145,26 @@ class SpatialLightController(Controller):
         output_matrix[:, :, :] = np.nan
         for i, location in enumerate(self.spatial_categories):
             for j, device_name in enumerate(self.output_devices.keys()):
-                r, g, b = spatial_map_values[location]
+                r, g, b = [0, 0, 0]
+                if location in spatial_map_values:
+                    r, g, b = spatial_map_values[location]
+                    if r == -1 and g == -1 and b == -1:
+                        r = np.nan
+                        g = np.nan
+                        b = np.nan
                 if device_name in self.attr_indexed_output_devices[location]:
                     output_matrix[i, j, :] = [r, g, b]
         output = np.nanmean(output_matrix, axis=0)
         for i, device in enumerate(self.output_devices):
             device_instance = self.output_devices[device]
             r, g, b = output[i]
-            print(r, g, b)
             device_instance.set_value("r", r)
             device_instance.set_value("g", g)
             device_instance.set_value("b", b)
             self.send_channel_message(device_instance.name, "r", r)
             self.send_channel_message(device_instance.name, "g", g)
             self.send_channel_message(device_instance.name, "b", b)
+        return True
 
     def set_output_devices(self, output_devices):
         """

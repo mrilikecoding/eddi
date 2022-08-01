@@ -145,16 +145,16 @@ class GesturePipelineRunner:
     def run_cycle(self, energy_moment_delta_volumes, mei_volumes, mhi_volumes):
         self.update_config_values()
         sequences = None
+        # empty the ouput sequence for this upcoming cycle
+        self.output = []
+
         # Want to retain the output on the gesture comparer if it was set manually in
         # the dashboard (for viewing a light sequence for a certain gesture)
         # Otherwise reset the output.
-        if self.gesture_comparer.gestures_locked and self.gesture_comparer.best_output:
-            self.output = self.gesture_sequence_mapper.map_sequences_to_rgb(
-                self.gesture_comparer.best_output
-            )
-        else:
-            # empty the ouput sequence for this upcoming cycle
-            self.output = []
+        # if self.gesture_comparer.gestures_locked and self.gesture_comparer.best_output:
+        #     self.output = self.gesture_sequence_mapper.map_sequences_to_rgb(
+        #         self.gesture_comparer.best_output
+        #     )
 
         if len(self.global_gesture_sequences) == self.gesture_limit:
             self.gesture_limit_reached = True
@@ -190,7 +190,9 @@ class GesturePipelineRunner:
                 self.output = self.gesture_sequence_mapper.map_sequences_to_rgb(
                     self.gesture_comparer.best_output
                 )
-        elif self.gesture_comparer.gestures_locked and self.gesture_comparer.best_output:
+        elif (
+            self.gesture_comparer.gestures_locked and self.gesture_comparer.best_output
+        ):
             self.output = self.gesture_sequence_mapper.map_sequences_to_rgb(
                 self.gesture_comparer.best_output
             )

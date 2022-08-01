@@ -1,8 +1,9 @@
 global_config = {
     "fuzzy_tracker": {
-        "enabled": False,
-        "color_mode": "ocean",
-        # "color_mode": "lava",
+        "enabled": True,
+        # "color_mode": "default",
+        # "color_mode": "ocean",
+        "color_mode": "lava",
         # "color_mode": "sunshine",
     },
     "pattern_sequencer": {
@@ -24,11 +25,11 @@ global_config = {
     # note - at the moment, these are only compared two at a time. So the logic is if two values are the same
     # then just take the average of the two. Otherwise, use the two values as percentages
     "output_weights": {
-        "fuzzy_tracker": 0.01,
-        "pattern_sequencer": 0.01,
+        "fuzzy_tracker": 0.5,
+        "pattern_sequencer": 0.1,
         "gesture_pipeline": 0.99,
     },
-    # The default min/max x,y,z input values
+    # The default min/max x,5,z input values
     # TODO if the space is partitioned differently or hierarchically,
     # these will need to be set in spatial device config - prob makes sense to do that
     # there anyway - can be overridden by "self callibrate" flag
