@@ -1,3 +1,4 @@
+import copy
 class DimmerInterface:
     def __init__(self, name=None):
         self.name = name
@@ -15,4 +16,5 @@ class DimmerInterface:
         self.channels[channel_name] = value
 
     def get_value(self, channel_name):
-        return self.channels[channel_name]
+        return copy.copy(self.channels[channel_name])
+    
