@@ -114,4 +114,5 @@ class Lumi:
         for _, device in self.input_registry.items():
             self.light_controller.process_input_device_values(device)
 
-        self.light_controller.send_next_frame_values_to_devices()
+        if not self.light_controller.send_next_frame_values_to_devices():
+            self.blackout()
