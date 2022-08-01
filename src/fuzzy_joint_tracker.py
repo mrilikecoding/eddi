@@ -1,3 +1,4 @@
+import pymunk
 from src.pipeline_node import PipelineNode
 
 
@@ -17,6 +18,17 @@ class FuzzyJointTracker(PipelineNode):
         # set the max bounds based on incoming data
         self.self_calibrate = False
         self.output = []  # note - make sure to overwrite this and not append to it
+
+        # ### Physics ###
+        # self.simulate_physics = False
+        # self.space = pymunk.Space()
+        # self.space.gravity = (0, 0)
+        # self.body = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
+        # # TODO can create multiple spaces based on spatial config if there are multiple navmesh spaces
+        # self.shape = pymunk.Circle(self.body, 80)
+        # self.shape.elasticity = 0.4
+        # self.shape.friction = 0.5
+        # self.space.add(self.body, self.shape)
 
         # init pipeline parent
         super().__init__(min_max_dimensions)
@@ -70,12 +82,23 @@ class FuzzyJointTracker(PipelineNode):
     def process_input_device_values(self, input_object_instance):
         self.update_config_values()
         joint = self.space_joint_to_track
+        # if self.simulate_physics == True:
+        #     joint = "rightHand"
         output_map = {}
         for _, attrs in input_object_instance.people.items():
             if joint in attrs:
                 x = attrs[joint]["x"]
                 y = attrs[joint]["y"]
                 z = attrs[joint]["z"]
+                # if self.simulate_physics:
+                #     print("origin", x, z)
+                #     self.body.position = (x, z)
+                #     x = self.shape.body.position.x
+                #     z = self.shape.body.position.y
+                #     print("pymunk", x, z)
+                #     x, y, z = self.normalize_3d_point(x, y, z)
+                #     print("normed", x, z)
+                # else:
                 x, y, z = self.normalize_3d_point(x, y, z)
                 fuzzy_spatial_map = self.get_fuzzy_output(x, y, z)
                 # NOTE: This fuzzy tracker is a real time tracker,
@@ -94,8 +117,11 @@ class FuzzyJointTracker(PipelineNode):
             else:
                 return
         # can return a sequence, but this is a simple mapper module, so just one frame
-        if output_map:
+        if output_map and self.tracking:
             self.output = [output_map]
+        else:
+            self.output = []
+        # self.space.step(1 / 50)
 
     def mod_r(self, value):
         out = value

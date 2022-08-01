@@ -1,6 +1,3 @@
-import json
-
-
 class PipelineNode:
     def __init__(self, min_max_dimensions):
         self.space_min_x = min_max_dimensions["min_x"]
@@ -9,6 +6,10 @@ class PipelineNode:
         self.space_max_x = min_max_dimensions["max_x"]
         self.space_max_y = min_max_dimensions["max_y"]
         self.space_max_z = min_max_dimensions["max_z"]
+
+        self.width = self.space_max_x - self.space_min_x
+        self.depth = self.space_max_z - self.space_min_z
+        self.height = self.space_max_y - self.space_min_y
 
         # assume we have some discrete spatial areas and at least one binary primary axis
         # TODO can probably abstract this from config file

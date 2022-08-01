@@ -143,7 +143,7 @@ void draw(){
           currentPositionVector.lerp(lastPositionVector, 0.5f);
           distanceScalar = (225/currentPositionVector.z);
           if (
-            positionLabel == "head"
+            positionLabel == "head" ||  positionLabel == "rightHand" || positionLabel == "leftHand"
           ) {
             ellipse(currentPositionVector.x, currentPositionVector.y, distanceScalar*jointMarkerSize, distanceScalar*jointMarkerSize);
           }
