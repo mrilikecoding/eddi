@@ -12,6 +12,7 @@ class GestureAestheticSequenceMapper:
         self.director = director
         self.output = []
         # TODO - again, grab this from a config
+        self.smoothing_factor = 5
         self.spatial_categories = [
             "left",
             "right",
@@ -122,17 +123,26 @@ class GestureAestheticSequenceMapper:
                 }
             )
 
+        # normalize 0-1
+        normalized_partition_sequences = {
+            position: {
+                "r": (sequence["r"] - np.min(sequence["r"])) / 255.0,
+                "g": (sequence["g"] - np.min(sequence["g"])) / 255.0,
+                "b": (sequence["b"] - np.min(sequence["b"])) / 255.0,
+            }
+            for position, sequence in partition_sequences.items()
+        }
+        # restructure as list
         spatial_sequence_frames = []
-        # note - make sure to normalize these values to 0-1
         for i in range(frame_count):
             spatial_sequence_frames.append(
                 {
                     position: (
-                        utils.normalize_point(sequence["r"][i], 0, 255, 0, 1),
-                        utils.normalize_point(sequence["g"][i], 0, 255, 0, 1),
-                        utils.normalize_point(sequence["b"][i], 0, 255, 0, 1),
+                        sequence["r"][i],
+                        sequence["g"][i],
+                        sequence["b"][i],
                     )
-                    for position, sequence in partition_sequences.items()
+                    for position, sequence in normalized_partition_sequences.items()
                 }
             )
 
@@ -202,7 +212,7 @@ class GestureAestheticSequenceMapper:
                     for value in mean_values
                 ]
             ).astype(np.uint8),
-            5,
+            self.smoothing_factor,
         )
         # then convert to rgb
         values = np.array(

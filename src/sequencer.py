@@ -1,5 +1,6 @@
 from collections import deque
 import copy
+import numpy as np
 
 
 class Sequencer:
@@ -34,9 +35,15 @@ class Sequencer:
         # -1 indicates an invalid value that can be replaced, otherwise new values will average in
         self.init_frame = {k: (-1, -1, -1) for k in spatial_categories}
 
-    def add_sequence_to_queue(self, sequence, sequence_weight=1.0, origin="default"):
+        # exposing some internal vars for testing
+        self.current_sequence_weights = None
+        self.current_sequences = None
+        self.currnet_sequence_origins = None
+        self.unmerged_queue = None
+
+    def add_output_sequences_to_queue(self, outputs=[]):
         """
-        sequence should be shaped like this...
+        the sequence should be shaped like this...
         [{
             "back": (r, g, b),
             "front": (r, g, b),
@@ -44,69 +51,128 @@ class Sequencer:
             "top": (r, g, b),
             "right": (r, g, b),
             "left": (r, g, b),
-            "middle": (r, g, b),
+            # "middle": (r, g, b),
         }, ...]
         """
-        if not sequence:
+        if not len(outputs):
             return
 
-        if len(self.queue) < len(sequence):
+        # vars exposed for testing
+        self.current_sequence_weights = None
+        self.current_sequences = None
+        self.current_sequence_origins = None
+        self.unmerged_queue = None
+
+        eps = 1e-10  # for preventing divide by zero errors normalizing
+        origin_weights = {o["origin"]: o["weight"] for o in outputs}
+        sequence_weights = np.array([o["weight"] for o in outputs])
+        sequence_weights = sequence_weights / (np.sum(sequence_weights) + eps)
+        sequences = [o["sequence"] for o in outputs]
+        sequence_origins = [o["origin"] for o in outputs]
+
+        # vars exposed for testing
+        self.current_sequence_weights = sequence_weights
+        self.current_sequences = sequences
+        self.current_sequence_origins = sequence_origins
+
+        # determine how many spots to open in queue
+        max_sequence_len = 0
+        for seq in sequences:
+            if len(seq) > max_sequence_len:
+                max_sequence_len = len(seq)
+
+        if len(self.queue) < max_sequence_len:
             # open up empty queue slots to accomodate sequence
-            additional_slots = len(sequence) - len(self.queue)
+            additional_slots = max_sequence_len - len(self.queue)
             [
                 self.queue.append(copy.deepcopy(self.init_frame))
                 for _ in range(additional_slots)
             ]
-            [
-                self.queue_meta.append({"origin": origin, "weight": sequence_weight})
-                for _ in range(additional_slots)
-            ]
+            [self.queue_meta.append({}) for _ in range(additional_slots)]
 
-        # for each sequence frame check to see if there's an existing frame queued
-        # if not, add queue slots to accomodate this sequence and set the slot to the sequence values
-        # if there is a frame queued, average the new sequence with the existing sequence
-        for i in range(len(sequence)):
-            eps = 1e-10  # for preventing divide by zero errors normalizing
-            queued_frame = self.queue[i]
-            sequence_frame = sequence[i]
-            queued_frame_weight = self.queue_meta[i]["weight"]
-            normalizer = queued_frame_weight + sequence_weight + eps
+        # layer in each output sequence frame into a column of unmerged values
+        # for each queue position
+        self.unmerged_queue = []
+        for i, _ in enumerate(self.queue):
+            frame_layers = []
+            for j, sequence in enumerate(sequences):
+                # if the incoming sequence overlaps with this queue position
+                if i < len(sequence):
+                    # add the corresponding sequence weight/origin to the data
+                    sequence[i]["weight"] = sequence_weights[j]
+                    sequence[i]["origin"] = sequence_origins[j]
+                    # add the sequence frame to this queue column
+                    frame_layers.append(sequence[i])
+            # TODO prob can refactor this
+            # do a second pass normalizing the weights, since sequences will have different lengths
+            layer_weights = []
+            for layer in frame_layers:
+                layer_weights.append(layer["weight"])
+            layer_weights = np.array(layer_weights) / (np.sum(layer_weights) + eps)
+            for i, layer in enumerate(frame_layers):
+                frame_layers[i]["weight"] = layer_weights[i]
+
+            self.unmerged_queue.append(frame_layers)
+
+        for i, frame_layers in enumerate(self.unmerged_queue):
+            r, g, b = (-1, -1, -1)  # default, matching init frame
+            existing_weights = self.queue_meta[i].get("origins")
             for position in self.spatial_categories:
-                if queued_frame.get(position) and sequence_frame.get(position):
-                    # average values together
-                    rgb = [None, None, None]
-                    channel_value = 0
-                    for ch in range(3):
-                        if queued_frame[position][ch] < 0:
-                            # if this frame has no competetion from other sequence, use its default value
-                            channel_value = sequence_frame[position][ch]
-                        else:
-                            # if weghts are equal, just take the normal average
-                            if sequence_weight == queued_frame_weight:
-                                channel_value = (
-                                    queued_frame[position][ch]
-                                    + sequence_frame[position][ch]
-                                ) / 2
-                            else:
-                                # otherwise, give the weighted average of sum of sequence frames
-                                # where "output_weights" are defined in configuration
-                                channel_value = (
-                                    (queued_frame[position][ch] * queued_frame_weight)
-                                    + (sequence_frame[position][ch] * sequence_weight)
-                                ) / (2 * normalizer)
-                        rgb[ch] = channel_value
+                if position in self.queue[i]:
+                    r = self.queue[i][position][0]
+                    g = self.queue[i][position][1]
+                    b = self.queue[i][position][2]
+                frame_composition = []  # where did these values originate?
+                for j, sequence_frame in enumerate(frame_layers):
+                    frame_composition.append(sequence_frame["origin"])
+                    if position in sequence_frame:
 
-                    queued_frame[position] = tuple(rgb)
-        # send the latest queued output to the Director class instance for
-        # final stage transformations
-        self.director.set_current_queue(
-            copy.copy(self.queue), copy.copy(self.queue_meta)
-        )
+                        weighted_r = (
+                            sequence_frame[position][0] * sequence_frame["weight"]
+                        )
+                        weighted_g = (
+                            sequence_frame[position][1] * sequence_frame["weight"]
+                        )
+                        weighted_b = (
+                            sequence_frame[position][2] * sequence_frame["weight"]
+                        )
+                        if all([ch >= 0 for ch in [r, g, b]]):
+                            # TODO might be another edge case in here but maybe rarer
+                            # does this logic track?
+                            # if we have two overlapping sequences from the same source, average their values together
+                            if existing_weights is not None:
+                                current_origin = sequence_frame["origin"]
+                                if current_origin in existing_weights:
+                                    r = (r + weighted_r) / 2
+                                    g = (g + weighted_g) / 2
+                                    b = (b + weighted_b) / 2
+                            # otherwise add into existing sequence
+                            else:
+                                r += weighted_r
+                                g += weighted_g
+                                b += weighted_b
+                        else:
+                            r = weighted_r
+                            g = weighted_g
+                            b = weighted_b
+                        self.queue[i][position] = tuple(np.round((r, g, b), 3))
+                    else:
+                        # if there is no position value, remove the placeholder entry for position
+                        if position in self.queue[i]:
+                            del self.queue[i][position]
+            self.queue_meta[i]["origins"] = {
+                o: w for o, w in origin_weights.items() if o in frame_composition
+            }
+
+        # update director with latest queue / queue meta
+        self.director.current_queue = self.queue
+        self.director.current_queue_meta = self.queue_meta
+        return
 
     def get_next_values(self):
-        queue = copy.copy(self.director.get_current_queue())
-        if len(queue):
-            self.queue.popleft()
-            return queue.popleft()
+        if len(self.queue):
+            next_values = copy.copy(self.director.current_queue.popleft())
+            next_meta = copy.copy(self.director.current_queue_meta.popleft())
+            return next_values
         else:
             return False

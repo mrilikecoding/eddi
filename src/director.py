@@ -69,12 +69,7 @@ class Director:
                 * Intensity
     """
 
-    def __init__(self, current_queue=None):
-        self.currrent_queue = current_queue
+    def __init__(self, current_queue=None, current_queue_meta=None):
+        self.current_queue = current_queue
+        self.current_queue_meta = current_queue_meta
         self.config = global_config
-
-    def set_current_queue(self, queue, queue_meta):
-        self.currrent_queue = queue
-
-    def get_current_queue(self):
-        return copy.copy(self.currrent_queue)
