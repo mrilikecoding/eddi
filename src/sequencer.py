@@ -122,7 +122,7 @@ class Sequencer:
                     r = self.queue[i][position][0]
                     g = self.queue[i][position][1]
                     b = self.queue[i][position][2]
-                frame_composition = []  # where did these values originate?
+                frame_composition = []  # track where these values originated
                 for j, sequence_frame in enumerate(frame_layers):
                     frame_composition.append(sequence_frame["origin"])
                     if position in sequence_frame:
@@ -165,12 +165,16 @@ class Sequencer:
             }
 
         # update director with latest queue / queue meta
+        # NB: this is by reference
         self.director.current_queue = self.queue
         self.director.current_queue_meta = self.queue_meta
         return
 
     def get_next_values(self):
         if len(self.queue):
+            # popleft on director queue will affect sequencer queue by reference
+            # this is by design right now - getting into trouble copying values over
+            # however, this function will return a copy of next value
             next_values = copy.copy(self.director.current_queue.popleft())
             next_meta = copy.copy(self.director.current_queue_meta.popleft())
             return next_values
