@@ -138,21 +138,18 @@ class SpatialLightController(Controller):
         spatial_map_values = self.sequencer.get_next_values()
         if not spatial_map_values:
             return False
+
         r = len(self.spatial_categories)
         c = len(self.output_devices.keys())
-
         output_matrix = np.empty((r, c, 3), dtype=np.float)
         output_matrix[:, :, :] = np.nan
         for i, location in enumerate(self.spatial_categories):
             for j, device_name in enumerate(self.output_devices.keys()):
-                r, g, b = [0, 0, 0]
-                if location in spatial_map_values:
+                if (
+                    location in spatial_map_values
+                    and device_name in self.attr_indexed_output_devices[location]
+                ):
                     r, g, b = spatial_map_values[location]
-                    if r == -1 and g == -1 and b == -1:
-                        r = np.nan
-                        g = np.nan
-                        b = np.nan
-                if device_name in self.attr_indexed_output_devices[location]:
                     output_matrix[i, j, :] = [r, g, b]
         output = np.nanmean(output_matrix, axis=0)
         for i, device in enumerate(self.output_devices):

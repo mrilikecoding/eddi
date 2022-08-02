@@ -28,10 +28,9 @@ class GestureComparer:
         # loop captured gestures
         self.dashboard.set_comparer_instance(gesture_comparer=self)
         self.dashboard.display_dashboard()
+        self.best_output = []
 
     def ingest_sequences(self, sequences):
-        if self.gestures_locked or sequences is None:
-            return
         self.candidate_sequences = sequences
         self.detected_gesture_count += 1
         if len(self.gesture_sequence_library) < self.gesture_limit:
@@ -75,6 +74,7 @@ class GestureComparer:
         # Store latest weights in sequence meta
         for i, s in enumerate(self.gesture_sequence_library):
             s["meta"]["weight"] = self.weights[i]
+        return True
 
     def compute_similarity(self, sequences):
         """
