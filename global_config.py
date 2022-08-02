@@ -1,18 +1,18 @@
 global_config = {
     "fuzzy_tracker": {
-        "enabled": True,
-        # "color_mode": "default",
+        "enabled": False,
+        "color_mode": "default",
         # "color_mode": "ocean",
-        "color_mode": "lava",
+        # "color_mode": "lava",
         # "color_mode": "sunshine",
     },
     "pattern_sequencer": {
         "enabled": True,
-        "sequence_mode": "static",
+        # "sequence_mode": "static",
         # "sequence_mode": "oscillator1", # THIS ONE IS BROKEN
         # "sequence_mode": "oscillator2",
-        # "sequence_mode": "perlin",
-        "default_perline_range": (0.3, 0.7),
+        "sequence_mode": "perlin",
+        "default_perline_range": (0.0, 1.0),
         # "color_mode": "default",
         "color_mode": "ocean",
         # "color_mode": "lava",
@@ -25,8 +25,8 @@ global_config = {
     # note - at the moment, these are only compared two at a time. So the logic is if two values are the same
     # then just take the average of the two. Otherwise, use the two values as percentages
     "output_weights": {
-        "fuzzy_tracker": 0.5,
-        "pattern_sequencer": 0.1,
+        "fuzzy_tracker": 0.9,
+        "pattern_sequencer": 0.05,
         "gesture_pipeline": 0.99,
     },
     # The default min/max x,5,z input values
@@ -58,8 +58,8 @@ global_config = {
     },
     "sequence_all_incoming_gestures": True,  # if there is no "most similar sequence", still output the latest sequence
     "repeated_gesture_similarity_threshold": 15.0,  # upper bound of similarity score when selected a repeated gesture
-    "weight_increase_factor": 3.5,  # how much to scale up the weight of a repeated gesture
-    "weight_pruning_threshold": 0.15,  # when to drop off a gesture from library if the weights have been lowered enough
+    "weight_increase_factor": 2.5,  # how much to scale up the weight of a repeated gesture
+    "weight_pruning_threshold": 0.10,  # when to drop off a gesture from library if the weights have been lowered enough
     "load_saved_sequences_into_dashboard": False,  # load in a saved set of sequences from a gesture dashboard
     "load_saved_sequences_name": "sequences-1659035910.443143",  # sequences from gesture dashboard
     "saved_sequences_path": "saved_sequences/",  # path to sequence binaries

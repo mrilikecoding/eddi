@@ -167,9 +167,13 @@ class GesturePipelineRunner:
 
         # run 3 phased subcycles - will be None or dict of sequences
         # TODO this will need adjusting for multiple people
-        sequences = self.run_gesture_subcycles(
-            energy_moment_delta_volumes, mei_volumes, mhi_volumes
-        )
+        if (
+            not self.gesture_comparer.gestures_locked
+            or self.director.config["sequence_all_incoming_gestures"]
+        ):
+            sequences = self.run_gesture_subcycles(
+                energy_moment_delta_volumes, mei_volumes, mhi_volumes
+            )
 
         self.current_frame += 1
 
@@ -196,6 +200,15 @@ class GesturePipelineRunner:
             self.output = self.gesture_sequence_mapper.map_sequences_to_rgb(
                 self.gesture_comparer.best_output
             )
+        elif (
+            sequences
+            and self.gesture_comparer.gestures_locked
+            and self.director.config["sequence_all_incoming_gestures"]
+        ):
+            self.output = self.gesture_sequence_mapper.map_sequences_to_rgb(
+                sequences=sequences
+            )
+
         # Set the comparer's best output to none if we've locked gestures
         # If a gesture is manually added to the best output from the dashboard
         # it will be picked up from #process_cycle here and stay in this loop
