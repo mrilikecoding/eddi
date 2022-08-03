@@ -23,7 +23,14 @@ class ViewpointsGesture:
         self.set_spatial_relationship()
         self.set_topography()
         self.set_architecture()
-        self.summary_descriptors = ["tempo", "repetition", "kr", "duration", "shape", "gesture"]
+        self.summary_descriptors = [
+            "tempo",
+            "repetition",
+            "kr",
+            "duration",
+            "shape",
+            "gesture",
+        ]
 
     def get_gesture_summary(self):
         summary = [
@@ -95,4 +102,5 @@ class ViewpointsGesture:
 
     def synthesize_new_sequence(self):
         """Output a variation of this gesture with shifted params"""
+        # TODO perhaps DTW with params dependent on some global vars
         pass

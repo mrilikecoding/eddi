@@ -106,6 +106,7 @@ class Lumi:
 
     def update_output_devices_from_queue(self):
         self.update_output_devices()
+        self.director.update()
 
     def update_output_devices(self):
         """

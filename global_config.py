@@ -15,6 +15,12 @@ global_config = {
         "default_perline_range": (0.0, 1.0),
         # "color_mode": "default",
         "color_mode": "ocean",
+        "director_control": {
+            "enabled": True,
+            "r_ratio": 0.5,  # starting ratio for pattern sequencer color
+            "g_ratio": 0.5,  # starting ratio for pattern sequencer color
+            "b_ratio": 0.5,  # starting ratio for pattern sequencer color
+        }
         # "color_mode": "lava",
         # "color_mode": "sunshine",
     },
@@ -64,5 +70,5 @@ global_config = {
     "load_saved_sequences_name": "sequences-1659035910.443143",  # sequences from gesture dashboard
     "saved_sequences_path": "saved_sequences/",  # path to sequence binaries
     "view_light_sequence_plots": False,  # plot the rgb curves when replaying a gesture
-    "draw_viewpoints_network": True,
+    "draw_viewpoints_network": True,  # when gestures are locked, display the network graph of viewpoints gestures
 }
