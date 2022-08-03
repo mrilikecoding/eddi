@@ -391,6 +391,8 @@ class GestureDashboard:
                     else:
                         gc = self.gesture_comparer
                     if self.gesture_comparer.gestures_locked:
+                        if self.director.config["draw_viewpoints_network"]:
+                            self.director.network.draw_network()
                         if seq == 0:
                             print(f"Lighting candidate sequence")
                             self.gesture_comparer.best_output = gc.candidate_sequences

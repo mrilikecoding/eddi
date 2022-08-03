@@ -6,6 +6,7 @@ import copy
 class ViewpointsNetwork:
     def __init__(self, summary_descriptors, director=None):
         self.director = director
+        self.director.network = self
         self.g = nx.Graph()
         self.count = 0
         self.gestures = {}
@@ -83,7 +84,7 @@ class ViewpointsNetwork:
         returns [(node1, node2,{"label":"gesture", "weight":1.333})]
         """
         edges = []
-        if not edges:
+        if not self.weighted_edges:
             return
         for edge in self.weighted_edges:
             node1 = edge[0]
@@ -143,7 +144,7 @@ class ViewpointsNetwork:
         }
         pos = nx.spring_layout(self.g, seed=63)  # Seed layout for reproducibility
         # Update position for node from each group
-        plt.clf()
+        # plt.clf()
         plt.title("Viewpoints Gesture Network")
         nx.draw_networkx(self.g, pos, with_labels=True)
         for edge in self.g.edges(data="weight"):

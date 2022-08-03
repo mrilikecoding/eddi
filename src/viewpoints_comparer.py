@@ -19,8 +19,8 @@ class ViewpointsComparer(GestureComparer):
         super().__init__(gesture_limit=self.gesture_limit, director=director)
 
     def process_cycle(self):
-        if self.director.config["draw_viewpoints_network"] and self.gestures_locked:
-            self.network.draw_network()
+        # if self.director.config["draw_viewpoints_network"] and self.gestures_locked:
+        #     self.network.draw_network()
         self.director.viewpoints_gestures = self.viewpoints_gestures
         self.director.network_properties = {
             "most_central_node": self.network.get_most_central_node(),

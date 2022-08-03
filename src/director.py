@@ -122,42 +122,67 @@ class Director:
             self.goal = "increase_ps"
 
         # self.run_annealing()
-        self.run_not_real_annealing()
+        self.run_simulated_ps_curve()
         self.epoch += 1
 
-    def run_not_real_annealing(self):
+    def run_simulated_ps_curve(self):
         r = self.config["pattern_sequencer"]["director_control"]["r_ratio"]
         b = self.config["pattern_sequencer"]["director_control"]["b_ratio"]
         g = self.config["pattern_sequencer"]["director_control"]["g_ratio"]
-        if self.reward_increasing():
+        if self.reward_increasing() and self.goal == "increase_ps":
             r += 0.002
-            g -= 0.01
-            b -= 0.02
-        elif self.reward_decreasing():
-            r -= 0.2
-            g += 0.1
-            b += 0.2
+            g -= 0.001
+            b -= 0.002
+        if self.reward_decreasing() and self.goal == "increase_ps":
+            r -= 0.0001
+        if self.reward_increasing() and self.goal == "decrease_ps":
+            r -= 0.002
+            g += 0.001
+            b += 0.002
+        elif self.reward_decreasing() and self.goal == "decrease_ps":
+            r += 0.0001
+
+        if r >= 1.0:
+            r = 1.0
+        if g >= 1.0:
+            g = 1.0
+        if b >= 1.0:
+            b = 1.0
+        if r <= 0.0:
+            r = 0.0
+        if g <= 0.0:
+            g = 0.0
+        if b <= 0.0:
+            b = 0.0
+
+        # print(self.eval, self.goal, r, g, b)
+        if all([r == 1.0, g == 0.0, b == 0.0]):
+            self.goal == "decrease_ps"
+        if all([r == 0.0, g == 1.0, b == 1.0]):
+            self.goal == "increase_ps"
 
         self.config["pattern_sequencer"]["director_control"]["r_ratio"] = r
         self.config["pattern_sequencer"]["director_control"]["b_ratio"] = g
         self.config["pattern_sequencer"]["director_control"]["g_ratio"] = b
 
-    def run_annealing(self):
-        if self.epoch == 0:
-            return
-        # https://machinelearningmastery.com/simulated-annealing-from-scratch-in-python/
-        # calculate temperature for current epoch
-        candidate = self.current_eval + np.random.randint(10.0 * self.step_size)
-        t = self.temp / float(self.epoch + 1)
-        diff = self.current_eval - self.previous_eval
+    # def run_annealing(self):
+    #     if self.epoch == 0:
+    #         return
+    #     # https://machinelearningmastery.com/simulated-annealing-from-scratch-in-python/
+    #     # calculate temperature for current epoch
+    #     candidate = self.current_eval + np.random.randint(10.0 * self.step_size)
+    #     t = self.temp / float(self.epoch + 1)
+    #     diff = self.current_eval - self.previous_eval
 
-        metropolis = np.exp(-diff / t)
+    #     metropolis = np.exp(-diff / t)
 
     def update_current_eval(self):
         if self.eval >= 1.0:
             self.eval = 1.0
+            self.goal == "decrease_ps"
         if self.eval <= -1.0:
             self.eval = -1.0
+            self.goal == "increase_ps"
         self.previous_eval = copy.copy(self.current_eval)
         self.current_eval = self.eval
 
