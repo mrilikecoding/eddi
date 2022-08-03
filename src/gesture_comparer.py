@@ -24,13 +24,17 @@ class GestureComparer:
 
         self.dashboard = GestureDashboard(director=self.director)
 
+        # for convenience with subclass using this superclass ingest method
+        # TODO this is a bit of hack - refactor
+        self.similarities_computed_this_round = False
+
     def process_cycle(self):
         # loop captured gestures
         self.dashboard.set_comparer_instance(gesture_comparer=self)
         self.dashboard.display_dashboard()
         self.best_output = []
 
-    def ingest_sequences(self, sequences):
+    def ingest_sequences(self, sequences, viewpoints_map=None):
         self.candidate_sequences = sequences
         self.detected_gesture_count += 1
         if len(self.gesture_sequence_library) < self.gesture_limit:
@@ -46,10 +50,14 @@ class GestureComparer:
                 self.normalize_weights()
             self.set_similarities()
         else:
-            self.similarities = self.compute_similarity(sequences)
-            # Update best output based on similarity scores
-            most_similar_idx = np.argmin(self.similarities)
+            # TODO this flag is a bit of a hack, just getting things working
+            # refactor the class/subclass relationship here
+            if not self.similarities_computed_this_round:
+                self.similarities = self.compute_similarity(sequences)
+                self.most_similar_idx = np.argmin(self.similarities)
+            most_similar_idx = self.most_similar_idx
 
+            # Update best output based on similarity scores
             if (
                 self.similarities[most_similar_idx]
                 < self.director.config["repeated_gesture_similarity_threshold"]
