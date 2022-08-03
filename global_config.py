@@ -64,4 +64,5 @@ global_config = {
     "load_saved_sequences_name": "sequences-1659035910.443143",  # sequences from gesture dashboard
     "saved_sequences_path": "saved_sequences/",  # path to sequence binaries
     "view_light_sequence_plots": False,  # plot the rgb curves when replaying a gesture
+    "draw_viewpoints_network": True,
 }
