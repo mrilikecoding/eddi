@@ -23,6 +23,7 @@ class ViewpointsGesture:
         self.set_spatial_relationship()
         self.set_topography()
         self.set_architecture()
+        self.summary_descriptors = ["tempo", "repetition", "kr", "duration", "shape", "gesture"]
 
     def get_gesture_summary(self):
         summary = [

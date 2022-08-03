@@ -3,11 +3,14 @@ import math
 
 from src.gesture_comparer import GestureComparer
 from src.viewpoints_gesture import ViewpointsGesture
+from src.viewpoints_network import ViewpointsNetwork
 
 
 class ViewpointsComparer(GestureComparer):
     def __init__(self, gesture_limit=3, director=None):
         self.director = director
+        self.summary_descriptors = ["tempo", "repetition", "kr", "duration", "shape", "gesture"]
+        self.network = ViewpointsNetwork(summary_descriptors=self.summary_descriptors, director=self.director)
         self.gesture_limit = self.director.config["gesture_limit"]
         self.viewpoints_gesture_limit = 6
         self.viewpoints_gestures = []
@@ -15,11 +18,22 @@ class ViewpointsComparer(GestureComparer):
         self.similarities_computed_this_round = False
         super().__init__(gesture_limit=self.gesture_limit, director=director)
 
+    def process_cycle(self):
+        if self.director.config["draw_viewpoints_network"] and self.gestures_locked:
+            self.network.draw_network()
+        self.director.viewpoints_gestures = self.viewpoints_gestures
+        self.director.network_properties = {
+            "most_central_node": self.network.get_most_central_node(),
+            "hightest_degree_node": self.network.get_highest_degree_node(),
+            "sorted_edge_list": self.network.get_weighted_edges(),
+        }
+        return super().process_cycle()
+
     def ingest_sequences(self, sequences):
         # TODO wary of increased memory usage with storing all gestures
         # will cross that bridge later...
-
         viewpoints_gesture = ViewpointsGesture(sequences_dict=sequences)
+        self.network.add_gesture(viewpoints_gesture)
         index = len(self.viewpoints_gestures)
         sequences["meta"]["viewpoints_gesture_index"] = index
         self.viewpoints_gestures.append(viewpoints_gesture)
