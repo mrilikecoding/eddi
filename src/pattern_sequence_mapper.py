@@ -89,10 +89,10 @@ class PatternSequenceMapper(PipelineNode):
             middle = self.amplitude
         elif self.sequence_mode == "perlin":
             back = self.samples[sample_idx, 0, 0]
-            front = self.samples[sample_idx, 0, 2]
             bottom = self.samples[sample_idx, 0, 1]
-            top = self.samples[sample_idx, 0, 4]
+            front = self.samples[sample_idx, 0, 2]
             right = self.samples[sample_idx, 0, 3]
+            top = self.samples[sample_idx, 0, 4]
             left = self.samples[sample_idx, 0, 5]
             middle = self.amplitude
 
@@ -116,8 +116,14 @@ class PatternSequenceMapper(PipelineNode):
             out = value * 1
         elif self.color_mode == "sunshine":
             out = value * 0.9
-        else:
-            out = value
+
+        if self.director.config["pattern_sequencer"]["director_control"]["enabled"]:
+            out = (
+                value
+                * self.director.config["pattern_sequencer"]["director_control"][
+                    "r_ratio"
+                ]
+            )
         return self.constrain(out)
 
     def mod_g(self, value):
@@ -128,8 +134,16 @@ class PatternSequenceMapper(PipelineNode):
             out = value * 0.10
         elif self.color_mode == "sunshine":
             out = value * 0.9
-        else:
-            out = value
+        elif self.director.config["director_control"]["enabled"]:
+            out = value * self.director.config["director_control"]["g_ratio"]
+
+        if self.director.config["pattern_sequencer"]["director_control"]["enabled"]:
+            out = (
+                value
+                * self.director.config["pattern_sequencer"]["director_control"][
+                    "g_ratio"
+                ]
+            )
         return self.constrain(out)
 
     def mod_b(self, value):
@@ -140,8 +154,14 @@ class PatternSequenceMapper(PipelineNode):
             out = value * 0.05
         elif self.color_mode == "sunshine":
             out = value * 0.10
-        else:
-            return self.constrain(value)
+
+        if self.director.config["pattern_sequencer"]["director_control"]["enabled"]:
+            out = (
+                value
+                * self.director.config["pattern_sequencer"]["director_control"][
+                    "b_ratio"
+                ]
+            )
         return self.constrain(out)
 
     def constrain(self, value, min=0.0, max=1.0):

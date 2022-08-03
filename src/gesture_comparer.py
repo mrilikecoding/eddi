@@ -66,6 +66,7 @@ class GestureComparer:
                     most_similar_idx,
                     self.similarities[most_similar_idx],
                 )
+                self.director.eval += 0.03
                 self.update_gesture_weights(most_similar_idx)
                 # store the current weight on in the output meta
                 self.gesture_sequence_library[most_similar_idx]["meta"][
@@ -76,6 +77,7 @@ class GestureComparer:
                 self.most_similar_sequence_index = None
                 self.best_output = sequences
             else:
+                self.director.eval -= 0.01
                 self.most_similar_sequence_index = None
                 self.best_output = None
         self.prune_low_weights()
@@ -179,6 +181,8 @@ class GestureComparer:
             filter(lambda v: v != None, self.gesture_sequence_library)
         )
         self.weights = np.array(list(filter(lambda v: v == v, self.weights)))
+        if np.max(self.weights) > 0.7:
+            self.director.eval += 0.02
 
     def compute_best_sequences(self, candidates):
         """

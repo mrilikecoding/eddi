@@ -1,4 +1,6 @@
 import copy
+import numpy as np
+
 from global_config import global_config
 
 
@@ -70,6 +72,107 @@ class Director:
     """
 
     def __init__(self, current_queue=None, current_queue_meta=None):
+        # annealing stuff for experimenting
+        self.epoch = 0
+        self.temp = 10
+        self.step_size = 0.1
+
         self.current_queue = current_queue
         self.current_queue_meta = current_queue_meta
         self.config = global_config
+        self.network_properties = None
+        # some vars for helping determing state / reward function
+        self.eval = 0.0  # just naively establishing a reward var
+        self.current_eval = None
+        self.previous_eval = None
+        # coining psychological stimulation so I don't have to write "arousal" over and over
+        self.eval_max = 1.0
+        self.eval_min = -1.0
+        self.goal = "increase_ps"  # increase psychological stimulation
+        # what vars to adjust for annealing
+        self.reward_config = {
+            "pattern_r": {
+                "value": self.config["pattern_sequencer"]["director_control"][
+                    "r_ratio"
+                ],
+                "min_max": (0, 1),
+                "inc": 0.1,
+            },
+            "pattern_g": {
+                "value": self.config["pattern_sequencer"]["director_control"][
+                    "g_ratio"
+                ],
+                "min_max": (0, 1),
+                "inc": 0.1,
+            },
+            "pattern_b": {
+                "value": self.config["pattern_sequencer"]["director_control"][
+                    "b_ratio"
+                ],
+                "min_max": (0, 1),
+                "inc": 0.1,
+            },
+        }
+
+    def update(self):
+        self.update_current_eval()
+        if self.current_eval == 1.0:
+            self.goal = "decrease_ps"
+        elif self.current_eval == -1.0:
+            self.goal = "increase_ps"
+
+        # self.run_annealing()
+        self.run_not_real_annealing()
+        self.epoch += 1
+
+    def run_not_real_annealing(self):
+        r = self.config["pattern_sequencer"]["director_control"]["r_ratio"]
+        b = self.config["pattern_sequencer"]["director_control"]["b_ratio"]
+        g = self.config["pattern_sequencer"]["director_control"]["g_ratio"]
+        if self.reward_increasing():
+            r += 0.002
+            g -= 0.01
+            b -= 0.02
+        elif self.reward_decreasing():
+            r -= 0.2
+            g += 0.1
+            b += 0.2
+
+        self.config["pattern_sequencer"]["director_control"]["r_ratio"] = r
+        self.config["pattern_sequencer"]["director_control"]["b_ratio"] = g
+        self.config["pattern_sequencer"]["director_control"]["g_ratio"] = b
+
+    def run_annealing(self):
+        if self.epoch == 0:
+            return
+        # https://machinelearningmastery.com/simulated-annealing-from-scratch-in-python/
+        # calculate temperature for current epoch
+        candidate = self.current_eval + np.random.randint(10.0 * self.step_size)
+        t = self.temp / float(self.epoch + 1)
+        diff = self.current_eval - self.previous_eval
+
+        metropolis = np.exp(-diff / t)
+
+    def update_current_eval(self):
+        if self.eval >= 1.0:
+            self.eval = 1.0
+        if self.eval <= -1.0:
+            self.eval = -1.0
+        self.previous_eval = copy.copy(self.current_eval)
+        self.current_eval = self.eval
+
+    def reward_increasing(self):
+        if self.current_eval and self.previous_eval:
+            if self.current_eval > self.previous_eval:
+                return True
+            else:
+                return False
+        return False
+
+    def reward_decreasing(self):
+        if self.current_eval and self.previous_eval:
+            if self.current_eval > self.previous_eval:
+                return False
+            else:
+                return True
+        return False
