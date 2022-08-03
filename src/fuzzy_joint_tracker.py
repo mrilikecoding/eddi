@@ -66,13 +66,13 @@ class FuzzyJointTracker(PipelineNode):
             bottom = 0
             middle = 0
         output = {
-            "back": (self.mod_r(back), self.mod_g(back), self.mod_b(back)),
-            "front": (self.mod_r(front), self.mod_g(front), self.mod_b(front)),
-            "bottom": (self.mod_r(bottom), self.mod_g(bottom), self.mod_b(bottom)),
-            "top": (self.mod_r(top), self.mod_g(top), self.mod_b(top)),
+            # "back": (self.mod_r(back), self.mod_g(back), self.mod_b(back)),
+            # "front": (self.mod_r(front), self.mod_g(front), self.mod_b(front)),
+            # "bottom": (self.mod_r(bottom), self.mod_g(bottom), self.mod_b(bottom)),
+            # "top": (self.mod_r(top), self.mod_g(top), self.mod_b(top)),
             "right": (self.mod_r(right), self.mod_g(right), self.mod_b(right)),
             "left": (self.mod_r(left), self.mod_g(left), self.mod_b(left)),
-            "middle": (self.mod_r(middle), self.mod_g(middle), self.mod_b(middle)),
+            # "middle": (self.mod_r(middle), self.mod_g(middle), self.mod_b(middle)),
         }
         return output
 
