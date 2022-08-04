@@ -9,8 +9,17 @@ from src.viewpoints_network import ViewpointsNetwork
 class ViewpointsComparer(GestureComparer):
     def __init__(self, gesture_limit=3, director=None):
         self.director = director
-        self.summary_descriptors = ["tempo", "repetition", "kr", "duration", "shape", "gesture"]
-        self.network = ViewpointsNetwork(summary_descriptors=self.summary_descriptors, director=self.director)
+        self.summary_descriptors = [
+            "tempo",
+            "repetition",
+            "kr",
+            "duration",
+            "shape",
+            "gesture",
+        ]
+        self.network = ViewpointsNetwork(
+            summary_descriptors=self.summary_descriptors, director=self.director
+        )
         self.gesture_limit = self.director.config["gesture_limit"]
         self.viewpoints_gesture_limit = 6
         self.viewpoints_gestures = []
