@@ -16,6 +16,7 @@ class Lumi:
         self.FPS = 30  # how many updates / frames per sec?
         self.osc_message_prefix = osc_message_prefix
         self.director = Director()
+        self.director = Director()
         self.output_registry = {}
         self.input_registry = {}
         self.input_dispatcher = dispatcher.Dispatcher()
