@@ -2,4 +2,4 @@
 *.vscode/**/*
 *.pyc*
 *.mov
-# saved_sequences/**/*
+saved_sequences/**/*
