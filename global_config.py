@@ -67,8 +67,8 @@ global_config = {
     "weight_increase_factor": 2.5,  # how much to scale up the weight of a repeated gesture
     "weight_pruning_threshold": 0.10,  # when to drop off a gesture from library if the weights have been lowered enough
     "load_saved_sequences_into_dashboard": True,  # load in a saved set of sequences from a gesture dashboard
-    "load_saved_sequences_name": "sequences-1659544406.044108",  # sequences from gesture dashboard
+    "load_saved_sequences_name": "sequences-1660780571.514543",  # sequences from gesture dashboard
     "saved_sequences_path": "saved_sequences/",  # path to sequence binaries
-    "view_light_sequence_plots": True,  # plot the rgb curves when replaying a gesture
+    "view_light_sequence_plots": False,  # plot the rgb curves when replaying a gesture
     "draw_viewpoints_network": False,  # when gestures are locked, display the network graph of viewpoints gestures
 }
