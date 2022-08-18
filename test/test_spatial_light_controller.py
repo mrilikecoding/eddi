@@ -3,7 +3,7 @@ import numpy as np
 
 from src.spatial_light_controller import SpatialLightController
 from src.director import Director
-from output_devices.dimmer_interface import DimmerInterface
+from src.output_devices.dimmer_interface import DimmerInterface
 
 
 class TestSpatialLightingController(unittest.TestCase):

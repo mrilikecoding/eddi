@@ -2,8 +2,8 @@
 import time
 
 from src.lumi import Lumi
-from src.dimmer_interface import DimmerInterface
-from src.kinect_interface import KinectInterface
+from src.output_devices.dimmer_interface import DimmerInterface
+from src.input_devices.kinect_interface import KinectInterface
 
 if __name__ == "__main__":
 
