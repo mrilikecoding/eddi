@@ -69,17 +69,15 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
-    permissions:
-      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
     
     steps:
+    - uses: actions/checkout@v4
+    
     - name: Download build artifacts
       uses: actions/download-artifact@v4
       with:
         name: dist
         path: dist/
-    
-    - uses: actions/checkout@v4
     
     - name: Extract version from pyproject.toml
       id: extract_version
