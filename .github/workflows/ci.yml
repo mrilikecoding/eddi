@@ -87,4 +87,4 @@ jobs:
     
     - name: Run security checks
       run: |
-        uv run pip-audit --disable-pip
+        uv run pip-audit
