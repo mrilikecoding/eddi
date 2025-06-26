@@ -1,0 +1,7 @@
+# Minimal dependencies for a successful build
+sphinx>=7.0.0
+alabaster>=0.7.14
+sphinx-multiversion>=0.2.4
+tomli>=2.0.1
+sphinxext-opengraph>=0.8.0
+sphinxcontrib-mermaid>=0.9.0
