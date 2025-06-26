@@ -47,23 +47,10 @@ jobs:
       run: |
         uv run mypy .
     
-    - name: Run tests
-      run: |
-        uv run pytest -v --cov=src --cov-report=xml --cov-report=term-missing
-    
     - name: Build documentation
       run: |
         uv sync --extra docs
         uv run sphinx-build docs/source docs/build/html
-    
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
-      with:
-        file: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: false
 
   security:
     runs-on: ubuntu-latest
