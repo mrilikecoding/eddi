@@ -56,6 +56,7 @@ jobs:
     - name: Check build artifacts
       run: |
         ls -la dist/
+        uv add twine
         uv run python -m twine check dist/*
     
     - name: Upload build artifacts
