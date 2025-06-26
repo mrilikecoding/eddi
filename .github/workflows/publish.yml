@@ -90,13 +90,9 @@ jobs:
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         repository-url: https://test.pypi.org/legacy/
-        verbose: true
-        username: __token__
-        password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        password: ${{ secrets.PYPI_TEST_API_KEY }}
     
     - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
-        verbose: true
-        username: __token__
-        password: ${{ secrets.PYPI_API_TOKEN }}
+        password: ${{ secrets.PYPI_API_KEY }}
