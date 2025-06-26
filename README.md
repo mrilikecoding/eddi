@@ -6,6 +6,8 @@
 
 Eddi is an experimental platform for creating interactive environmental systems that respond to human movement and gesture. While originally scoped around lighting design, the system could be extended to sound and other environmental modalities. This repository represents ongoing research and development work exploring the intersection of physical theater, computer vision, and environmental design.
 
+📖 **[Full Documentation at eddi.readthedocs.io](https://eddi.readthedocs.io/)**
+
 ## Background & Inspiration
 
 This project emerged from my Masters Thesis work at Georgia Tech on PI3E (Platform for Intelligent, Immersive, Interactive Environments), combining my background as a physical theater artist, musician, and computer scientist. The ideas here have been developed over years of teaching physical theater, training with physical theater companies, and directing shows where I've used these techniques to help ensembles work together. The work is deeply informed by training in various somatic and movement-based practices.
