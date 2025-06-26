@@ -8,7 +8,7 @@ Eddi is an experimental platform for creating interactive environmental systems 
 
 ## Background & Inspiration
 
-This project emerged from my Masters Thesis work at Georgia Tech on PI3E (Platform for Intelligent, Immersive, Interactive Environments), combining my background as a physical theater artist, musician, and computer scientist. The ideas here have been developed over years of teaching physical theater and are deeply informed by training in various somatic and movement-based practices.
+This project emerged from my Masters Thesis work at Georgia Tech on PI3E (Platform for Intelligent, Immersive, Interactive Environments), combining my background as a physical theater artist, musician, and computer scientist. The ideas here have been developed over years of teaching physical theater, training with physical theater companies, and directing shows where I've used these techniques to help ensembles work together. The work is deeply informed by training in various somatic and movement-based practices.
 
 **Project Evolution**: PI3E/Lumi (thesis and prototype) → Eddi (modern architecture)
 

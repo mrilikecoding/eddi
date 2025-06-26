@@ -25,7 +25,7 @@ Artistic Foundation
 Physical Theater Pedagogy
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Years of teaching physical theater revealed the transformative power of giving performers direct agency over their environment. The most compelling work emerges when performers can shape space through embodied expression.
+Years of teaching physical theater, training with physical theater companies, and directing ensemble work revealed the transformative power of giving performers direct agency over their environment. The most compelling work emerges when performers can shape space through embodied expression.
 
 Traditional Hierarchies
 ~~~~~~~~~~~~~~~~~~~~~~~
