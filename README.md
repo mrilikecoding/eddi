@@ -181,3 +181,7 @@ MIT License - See [LICENSE](LICENSE) for details.
 ---
 
 *Eddi is an experiment in making spaces more alive, more responsive, more collaborative.*
+
+---
+
+Made with ❤️ by [nate.green](https://nate.green)

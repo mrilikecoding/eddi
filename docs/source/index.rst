@@ -96,3 +96,7 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+
+----
+
+Made with ❤️ by `nate.green <https://nate.green>`_
