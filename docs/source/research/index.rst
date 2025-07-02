@@ -13,7 +13,7 @@ This section covers the academic and artistic foundations of the Eddi project.
 Academic Foundation
 -------------------
 
-Eddi emerges from Masters Thesis research at Georgia Tech on PI3E (Platform for Intelligent, Immersive, Interactive Environments), combining computer science with physical theater practice and embodied cognition research.
+Eddi comes from Masters Thesis research at Georgia Tech on PI3E (Platform for Intelligent, Immersive, Interactive Environments). It combines computer science with physical theater practice and embodied cognition research.
 
 Research Areas
 --------------
@@ -21,4 +21,4 @@ Research Areas
 * **Embodied Interaction**: How technology can extend human expressive capacity
 * **Performance Studies**: Technology's role in live, ephemeral artistic practice  
 * **Human-Computer Interaction**: Designing collaborative rather than controlling interfaces
-* **Movement Analysis**: Novel gesture segmentation and recognition techniques
+* **Movement Analysis**: Gesture segmentation and recognition techniques

@@ -1,7 +1,7 @@
 System Architecture Overview
 ============================
 
-Eddi's architecture is designed around the principle of performer empowerment - enabling direct environmental control through movement and gesture.
+Eddi's architecture focuses on performer empowerment - enabling direct environmental control through movement and gesture.
 
 High-Level Architecture
 -----------------------
@@ -41,11 +41,11 @@ The central orchestrator that manages the entire system lifecycle, coordinates b
 
 AI Director
 ~~~~~~~~~~~
-Makes intelligent decisions about environmental responses based on movement input, inspired by psychological arousal research and designed to amplify performer intention.
+Makes smart decisions about environmental responses based on movement input, using psychology research principles to amplify performer intention.
 
 Processing Pipeline
 ~~~~~~~~~~~~~~~~~~~
-Transforms raw movement data into meaningful gesture and spatial information using novel segmentation techniques developed during thesis research.
+Transforms raw movement data into meaningful gesture and spatial information using segmentation techniques developed during thesis research.
 
 Plugin System
 ~~~~~~~~~~~~~

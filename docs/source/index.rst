@@ -13,7 +13,7 @@ Key Features
 ------------
 
 * **Performer Empowerment**: Direct environmental control through movement
-* **Novel Gesture Segmentation**: Advanced techniques from thesis research  
+* **Gesture Segmentation**: Advanced techniques from thesis research  
 * **Multi-Modal Output**: Lighting, sound, and other environmental controls
 * **Real-time Processing**: Low-latency response for live performance
 * **Modular Architecture**: Plugin-based system for extensibility

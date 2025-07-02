@@ -6,7 +6,7 @@ Platform for Intelligent, Immersive, Interactive Environments
 Academic Context
 ----------------
 
-This work emerged from Masters Thesis research at Georgia Tech, investigating how technology can empower performers to directly shape their environment through embodied expression.
+This work comes from Masters Thesis research at Georgia Tech, exploring how technology can empower performers to directly shape their environment through movement.
 
 Research Questions
 ------------------
@@ -16,7 +16,7 @@ Research Questions
 
 **Secondary Questions**
    * How do we flatten the hierarchy between human expression and environmental response?
-   * What novel gesture segmentation techniques can enable more nuanced movement recognition?
+   * What gesture segmentation techniques can enable more nuanced movement recognition?
    * How can technology enhance rather than replace creative collaboration between performers and designers?
 
 Artistic Foundation
@@ -25,7 +25,7 @@ Artistic Foundation
 Physical Theater Pedagogy
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Years of teaching physical theater, training with physical theater companies, and directing ensemble work revealed the transformative power of giving performers direct agency over their environment. The most compelling work emerges when performers can shape space through embodied expression.
+Teaching physical theater and directing ensemble work showed how powerful it is to give performers direct control over their environment. The most compelling work emerges when performers can shape space through embodied expression.
 
 Traditional Hierarchies
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -48,10 +48,10 @@ Physical theater training emphasizes:
 Technical Innovation
 -------------------
 
-Novel Gesture Segmentation
+Gesture Segmentation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The thesis developed new techniques for:
+The thesis created new techniques for:
 
 * Recognizing movement quality vs. just position
 * Temporal segmentation of gesture sequences
