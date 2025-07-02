@@ -10,16 +10,16 @@ Eddi is an experimental platform for creating interactive environmental systems 
 
 ## Background & Inspiration
 
-This project emerged from my Masters Thesis work at Georgia Tech on PI3E (Platform for Intelligent, Immersive, Interactive Environments), combining my background as a physical theater artist, musician, and computer scientist. The ideas here have been developed over years of teaching physical theater, training with physical theater companies, and directing shows where I've used these techniques to help ensembles work together. The work is deeply informed by training in various somatic and movement-based practices.
+This project came from my Masters Thesis work at Georgia Tech on PI3E (Platform for Intelligent, Immersive, Interactive Environments), bringing together my background as a physical theater artist, musician, and computer scientist. I've developed these ideas over years of teaching physical theater, training with companies, and directing shows using these techniques with ensembles. The work is deeply informed by training in various somatic and movement-based practices.
 
 **Project Evolution**: PI3E/Lumi (thesis and prototype) → Eddi (modern architecture)
 
 ### Artistic Foundation
 As a physical theater teaching artist, I've witnessed the transformative power of giving performers direct agency over their environment. In physical theater, the most compelling work emerges when performers can shape space through embodied expression - when the hierarchy between body and environment dissolves into collaborative creation.
 
-Traditional theatrical hierarchies often separate designers and performers, leading to disjointed collaborations where lighting design happens independently of embodied exploration. This system doesn't aim to replace designers, but rather to provide tools that enable performer-driven design collaborations much earlier in the creative process. Performers can explore spatial and environmental possibilities alongside movement development, while designers can work with lived, embodied data rather than theoretical blocking.
+Traditional theater typically separates designers and performers, creating disjointed collaborations where lighting design happens separately from movement exploration. This system doesn't replace designers - it provides tools for performer-driven design collaborations earlier in the creative process. Performers can explore spatial and environmental possibilities alongside movement development, while designers can work with lived, embodied data rather than theoretical blocking.
 
-Beyond collaborative benefits, the system opens new expressive possibilities: the power of improvising with an intelligent spatial agent that responds to and amplifies performer intention in real-time.
+Beyond collaboration benefits, the system opens new expressive possibilities: improvising with an intelligent spatial agent that responds to and amplifies performer intention in real-time.
 
 ### Technical Inspiration  
 The challenge: How do we create technological systems that empower performers to directly sculpt their environment through movement? How do we flatten the hierarchy between human expression and environmental response? This work represents an ongoing investigation into performer-controlled, responsive environments.
@@ -53,18 +53,18 @@ Currently migrating from the original PI3E/Lumi implementation to a modern, exte
 ## Core Concepts
 
 ### Performer Empowerment
-Rather than external control systems, Eddi aims to extend the performer's body into the environment itself. Movement becomes a direct means of environmental sculpting - immediate, intuitive, and expressive.
+Instead of external control systems, Eddi extends the performer's body into the environment itself. Movement becomes a direct means of environmental sculpting - immediate, intuitive, and expressive.
 
 ### Embodied Agency
-Drawing from somatic practices and physical theater training, the system is designed to respond to embodied intention and presence. Performers shape space through the quality of their inhabitation, not just their location within it.
+Drawing from somatic practices and physical theater training, the system responds to embodied intention and presence. Performers shape space through the quality of their inhabitation, not just their location within it.
 
 ### Flattened Hierarchy
-The goal is to dissolve traditional separations between performer and environment, between "controller" and "controlled." Technology becomes an extension of expressive capacity rather than an external system to navigate.
+The goal is to dissolve traditional separations between performer and environment, between "controller" and "controlled." Technology extends your expressive capacity instead of creating an external system to navigate.
 
 ## Technical Approach
 
 ### Movement Analysis
-- **Novel Gesture Segmentation**: Techniques developed during Masters thesis research
+- **Gesture Segmentation**: Techniques developed during Masters thesis research
 - **MEI/MHI Processing**: Motion Energy/History Imaging for gesture recognition
 - **Pose Estimation**: Integration with StreamPoseML for modern computer vision
 - **Spatial Mapping**: Multi-zone environmental awareness
